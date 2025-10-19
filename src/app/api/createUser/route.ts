@@ -18,10 +18,7 @@ export async function POST(req: NextRequest) {
     // Check if username already exists
     const usernameSnap = await adminDb.ref(`usernames/${username}`).get();
     if (usernameSnap.exists()) {
-      return NextResponse.json(
-        { error: "Username already taken" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Username already taken" }, { status: 400 });
     }
 
     const userData = {
@@ -46,9 +43,6 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error(err);
-    return NextResponse.json(
-      { error: err.message || "Server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }

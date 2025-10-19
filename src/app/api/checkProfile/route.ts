@@ -8,9 +8,7 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get("authorization");
 
     // 2️⃣ Extract the token (Bearer <token>)
-    const idToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : null;
+    const idToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
 
     if (!idToken) {
       return NextResponse.json({ exists: false, error: "Missing token" });

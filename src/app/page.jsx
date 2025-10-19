@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Button,
-  Container,
-  Typography,
-  Box,
-  CircularProgress,
-} from "@mui/material";
+import { Button, Container, Typography, Box, CircularProgress } from "@mui/material";
 import { auth, googleAuthProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 
@@ -35,17 +29,8 @@ export default function LoginPage() {
         Welcome to DiHola.Vercel.App
       </Typography>
       <Box sx={{ mt: 4 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleGoogleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            "Sign in with Google"
-          )}
+        <Button variant="contained" color="primary" onClick={handleGoogleLogin} disabled={loading}>
+          {loading ? <CircularProgress size={24} color="inherit" /> : "Sign in with Google"}
         </Button>
       </Box>
     </Container>

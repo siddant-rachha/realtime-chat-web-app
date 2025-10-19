@@ -19,11 +19,7 @@ export const metadata: Metadata = {
   description: "Chat app with realtime messaging",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={roboto.variable}>

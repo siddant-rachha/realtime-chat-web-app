@@ -5,7 +5,7 @@
   "scripts": {
     "encrypt-file": "read -s -p '🔐 Enter password to encrypt: ' pass && echo && openssl aes-256-cbc -salt -pbkdf2 -in FILE_NAME_FROM_ROOT_PATH -out ENCRYPTED_FILE_NAME -k \"$pass\" && echo '✅ file encrypted!'",
     "decrypt-file": "read -s -p '🔐 Enter password to decrypt: ' pass && echo && openssl aes-256-cbc -d -pbkdf2 -in FILE_NAME_TO_DECRYPT_FROM_ROOT_PATH -out DECRYPTED_FILE_NAME -k \"$pass\" && echo '✅ file decrypted!'",
-    "decrypt-file-on-server": "encryption_password=$(grep '^ENCRYPTION_PASSWORD=' .env | cut -d'=' -f2- | tr -d '\"') && echo \"🔐 Using password from .env\" && openssl aes-256-cbc -d -pbkdf2 -in firebaseServiceAccount.json.encrypted -out firebaseServiceAccount.json -k \"$encryption_password\" && echo '✅ file decrypted!'",
+    "decrypt-file-on-server": "node scripts/decrypt.js",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
@@ -23,6 +23,7 @@
     "@mui/material": "^7.3.4",
     "@mui/material-nextjs": "^7.3.3",
     "axios": "^1.12.2",
+    "dotenv": "^17.2.3",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",
     "next": "15.5.6",

@@ -3,14 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import {
-  Box,
-  Button,
-  Container,
-  TextField,
-  Typography,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Button, Container, TextField, Typography, CircularProgress } from "@mui/material";
 
 export default function SetupProfilePage() {
   const [displayName, setDisplayName] = useState("");
@@ -68,18 +61,8 @@ export default function SetupProfilePage() {
           sx={{ mb: 2 }}
         />
 
-        <Button
-          fullWidth
-          variant="contained"
-          color="primary"
-          type="submit"
-          disabled={creating}
-        >
-          {creating ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            "Create Profile"
-          )}
+        <Button fullWidth variant="contained" color="primary" type="submit" disabled={creating}>
+          {creating ? <CircularProgress size={24} color="inherit" /> : "Create Profile"}
         </Button>
       </Box>
     </Container>

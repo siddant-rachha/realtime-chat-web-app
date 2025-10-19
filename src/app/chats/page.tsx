@@ -10,9 +10,7 @@ export default function ChatsPage() {
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography variant="h5">
-        Hello, {user?.displayName || "User"} 👋
-      </Typography>
+      <Typography variant="h5">Hello, {user?.displayName || "User"} 👋</Typography>
       <Typography variant="body1">Welcome to your chats!</Typography>
 
       <Button variant="outlined" sx={{ mt: 2 }} onClick={() => signOut(auth)}>
