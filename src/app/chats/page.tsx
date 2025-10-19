@@ -1,12 +1,14 @@
 "use client";
 
 import { Box, Typography, Button } from "@mui/material";
-import { useAuth } from "@/store/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useAuthContext } from "@/store/Auth/useAuthContext";
 
 export default function ChatsPage() {
-  const { user } = useAuth();
+  const {
+    selectors: { user },
+  } = useAuthContext();
 
   return (
     <Box sx={{ p: 4 }}>
