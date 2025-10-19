@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "encrypt-file": "read -s -p '🔐 Enter password to encrypt: ' pass && echo && openssl aes-256-cbc -salt -pbkdf2 -in FILE_NAME_FROM_ROOT_PATH -out ENCRYPTED_FILE_NAME -k \"$pass\" && echo '✅ file encrypted!'",
-    "decrypt-file": "read -s -p '🔐 Enter password to decrypt: ' pass && echo && openssl aes-256-cbc -d -pbkdf2 -in FILE_NAME_TO_DECRYPT_FROM_ROOT_PATH -out DECRYPTED_FILE_NAME -k \"$pass\" && echo '✅ file decrypted!'",
+    "decrypt-file": "read -s -p '🔐 Enter password to decrypt: ' pass && echo && openssl aes-256-cbc -d -pbkdf2 -in firebaseServiceAccount.json.encrypted -out firebaseServiceAccount.json -k \"$pass\" && echo '✅ file decrypted!'",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
