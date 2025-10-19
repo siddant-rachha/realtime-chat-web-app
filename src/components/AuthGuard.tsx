@@ -3,25 +3,27 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CircularProgress, Box } from "@mui/material";
-import { useAuth } from "@/store/AuthContext";
+import { useAuthContext } from "@/store/Auth/useAuthContext";
 
 const PUBLIC_ROUTES = ["/"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const {
+    selectors: { user, userLoading },
+  } = useAuthContext();
 
   useEffect(() => {
-    if (loading) return;
+    if (userLoading) return;
 
     // Not logged in → only allow public routes
     if (!user && !PUBLIC_ROUTES.includes(pathname)) {
       router.replace("/");
     }
-  }, [user, loading, pathname, router]);
+  }, [user, userLoading, pathname, router]);
 
-  if (loading) {
+  if (userLoading) {
     return (
       <Box
         sx={{

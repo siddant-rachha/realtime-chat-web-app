@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import {
@@ -15,39 +15,8 @@ import {
 export default function SetupProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
-  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const router = useRouter();
-
-  // Check if user already has a profile
-  useEffect(() => {
-    const checkProfile = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        router.replace("/");
-        return;
-      }
-
-      const idToken = await user.getIdToken();
-      const res = await fetch("/api/checkProfile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const data = await res.json();
-
-      if (data.exists) {
-        // ✅ User already has profile → redirect to /chats
-        router.replace("/chats");
-      } else {
-        // ✅ Allow filling the form
-        setLoading(false);
-      }
-    };
-
-    checkProfile();
-  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,21 +45,6 @@ export default function SetupProfilePage() {
       setCreating(false);
     }
   };
-
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Container maxWidth="sm" sx={{ mt: 8 }}>

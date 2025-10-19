@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Button,
   Container,
@@ -9,36 +9,10 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { auth, googleAuthProvider } from "@/lib/firebase";
-import { signInWithPopup, onAuthStateChanged } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { signInWithPopup } from "firebase/auth";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setLoading(true);
-        const idToken = await user.getIdToken();
-        const res = await fetch("/api/checkProfile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        const data = await res.json();
-
-        if (data.exists) {
-          router.replace("/chats");
-        } else {
-          router.replace("/setup-profile");
-        }
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -47,7 +21,7 @@ export default function LoginPage() {
         prompt: "select_account",
       });
       await signInWithPopup(auth, googleAuthProvider);
-      // No redirect here — onAuthStateChanged will handle it
+      // No redirect here — onAuthStateChanged will handle it in AuthContext
     } catch (err) {
       console.error(err);
       alert("Login failed. Please try again.");
@@ -58,7 +32,7 @@ export default function LoginPage() {
   return (
     <Container maxWidth="sm" sx={{ mt: 10, textAlign: "center" }}>
       <Typography variant="h4" gutterBottom>
-        Welcome to Realtime Chat App
+        Welcome to DiHola.Vercel.App
       </Typography>
       <Box sx={{ mt: 4 }}>
         <Button

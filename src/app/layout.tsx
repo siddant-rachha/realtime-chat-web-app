@@ -5,7 +5,7 @@ import { Roboto } from "next/font/google";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 import AuthGuard from "@/components/AuthGuard";
-import { AuthProvider } from "@/store/AuthContext";
+import { AuthProvider } from "@/store/Auth/AuthContext";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -15,7 +15,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Realtime Chat App",
+  title: "DiHola.Vercel.App",
   description: "Chat app with realtime messaging",
 };
 
