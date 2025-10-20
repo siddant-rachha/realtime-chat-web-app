@@ -1,5 +1,5 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +13,8 @@ import {
   Button,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
+import DoneIcon from "@mui/icons-material/Done";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import { useParams } from "next/navigation";
 import {
   ref,
@@ -24,6 +26,7 @@ import {
   limitToLast,
   endAt,
   onChildAdded,
+  onChildChanged,
 } from "firebase/database";
 import { database as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
@@ -33,6 +36,7 @@ interface Message {
   senderUid: string;
   text: string;
   timestamp: number;
+  status?: Record<string, string>;
 }
 
 const PAGE_SIZE = 50;
@@ -62,7 +66,7 @@ export default function ChatDetailPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Load initial messages
+  // 🔹 Load initial messages
   useEffect(() => {
     const loadInitialMessages = async () => {
       try {
@@ -81,6 +85,7 @@ export default function ChatDetailPage() {
           setMessages(msgs);
           if (msgs.length > 0) setEarliestTimestamp(msgs[0].timestamp);
         }
+
         setLoading(false);
         scrollToBottom();
       } catch (err) {
@@ -92,7 +97,29 @@ export default function ChatDetailPage() {
     loadInitialMessages();
   }, [chatId]);
 
-  // Load older messages (preserve scroll position)
+  // 🔹 Mark messages as READ when chat opens
+  useEffect(() => {
+    const markMessagesAsRead = async () => {
+      if (!user?.uid || !chatId) return;
+      const updates: Record<string, any> = {};
+
+      messages.forEach((msg) => {
+        if (msg.senderUid !== user.uid && msg.status?.[user.uid] === "sent") {
+          updates[`chats/${chatId}/${msg.id}/status/${user.uid}`] = "read";
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        await update(ref(db), updates);
+      }
+    };
+
+    if (messages.length > 0) {
+      markMessagesAsRead();
+    }
+  }, [messages, chatId, user?.uid]);
+
+  // 🔹 Load older messages
   const loadOlderMessages = async () => {
     if (!earliestTimestamp || loadingMore) return;
     setLoadingMore(true);
@@ -120,7 +147,6 @@ export default function ChatDetailPage() {
         setMessages((prev) => [...olderMsgs, ...prev]);
         if (olderMsgs.length > 0) setEarliestTimestamp(olderMsgs[0].timestamp);
 
-        // Preserve scroll position
         if (container) {
           const scrollHeightAfter = container.scrollHeight;
           container.scrollTop = scrollHeightAfter - scrollHeightBefore;
@@ -133,16 +159,19 @@ export default function ChatDetailPage() {
     setLoadingMore(false);
   };
 
-  // Real-time listener for new messages
+  // 🔹 Realtime new messages & status updates
   useEffect(() => {
     const messagesRef = ref(db, `chats/${chatId}`);
-    const unsubscribe = onChildAdded(messagesRef, (snap) => {
+
+    // New messages listener
+    const unsubscribeAdded = onChildAdded(messagesRef, (snap) => {
       const data = snap.val();
       const newMsg: Message = {
         id: snap.key!,
         senderUid: data.senderUid,
         text: data.text,
         timestamp: data.timestamp,
+        status: data.status || {},
       };
 
       setMessages((prev) => {
@@ -153,9 +182,27 @@ export default function ChatDetailPage() {
       scrollToBottom();
     });
 
-    return () => unsubscribe();
+    // Updated message listener (status or edits)
+    const unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
+      const updatedData = snap.val();
+      const updatedMsg: Message = {
+        id: snap.key!,
+        senderUid: updatedData.senderUid,
+        text: updatedData.text,
+        timestamp: updatedData.timestamp,
+        status: updatedData.status || {},
+      };
+
+      setMessages((prev) => prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m)));
+    });
+
+    return () => {
+      unsubscribeAdded();
+      unsubscribeChanged();
+    };
   }, [chatId]);
 
+  // 🔹 Send message
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -189,7 +236,7 @@ export default function ChatDetailPage() {
       setInput("");
       scrollToBottom();
     } catch (err) {
-      console.error(err);
+      console.error("Error sending message:", err);
     }
   };
 
@@ -198,7 +245,6 @@ export default function ChatDetailPage() {
       maxWidth="sm"
       sx={{ height: "100vh", display: "flex", flexDirection: "column", pb: 2 }}
     >
-      {/* Messages container */}
       <Box
         ref={scrollContainerRef}
         sx={{
@@ -212,7 +258,6 @@ export default function ChatDetailPage() {
           borderRadius: 2,
         }}
       >
-        {/* Load older messages button */}
         <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
           <Button
             variant="outlined"
@@ -223,30 +268,54 @@ export default function ChatDetailPage() {
           </Button>
         </Box>
 
-        {/* Messages */}
         {loading ? (
           <CircularProgress sx={{ mx: "auto", mt: 5 }} />
         ) : messages.length === 0 ? (
           <Typography sx={{ textAlign: "center", mt: 2 }}>No messages yet</Typography>
         ) : (
-          messages.map((msg) => (
-            <Box
-              key={msg.id}
-              sx={{
-                alignSelf: msg.senderUid === user.uid ? "flex-end" : "flex-start",
-                backgroundColor: msg.senderUid === user.uid ? "#1976d2" : "#e0e0e0",
-                color: msg.senderUid === user.uid ? "#fff" : "#000",
-                borderRadius: 2,
-                p: 1.5,
-                maxWidth: "75%",
-              }}
-            >
-              <Typography variant="body1">{msg.text}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7, fontSize: "0.7rem" }}>
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </Typography>
-            </Box>
-          ))
+          messages.map((msg) => {
+            const isMine = msg.senderUid === user.uid;
+            const statusForFriend = msg.status?.[friendUid];
+            return (
+              <Box
+                key={msg.id}
+                sx={{
+                  alignSelf: isMine ? "flex-end" : "flex-start",
+                  backgroundColor: isMine ? "#1976d2" : "#e0e0e0",
+                  color: isMine ? "#fff" : "#000",
+                  borderRadius: 2,
+                  p: 1.5,
+                  maxWidth: "75%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Typography variant="body1">{msg.text}</Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mt: 0.5,
+                  }}
+                >
+                  <Typography variant="caption" sx={{ opacity: 0.7, fontSize: "0.7rem" }}>
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </Typography>
+
+                  {isMine && (
+                    <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
+                      {statusForFriend === "read" ? (
+                        <DoneAllIcon sx={{ fontSize: "1rem", color: "#4FC3F7" }} />
+                      ) : (
+                        <DoneIcon sx={{ fontSize: "1rem", color: "#fff" }} />
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </Box>
