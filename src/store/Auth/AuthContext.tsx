@@ -3,7 +3,7 @@
 import React, { createContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { userApi } from "@/apiService/userApi";
 
 interface AuthContextType {
@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -31,10 +32,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (firebaseUser) {
         const { exists } = await userApi.checkProfile();
         if (!exists) {
-          router.push("/setup-profile");
+          router.replace("/setup-profile");
         } else {
           // User has profile, proceed to chats
-          router.push("/chats");
+          if (pathname === "/" || pathname === "/setup-profile") {
+            router.replace("/chats");
+          }
         }
       }
 
