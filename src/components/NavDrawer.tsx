@@ -217,7 +217,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
           </IconButton>
         </Toolbar>
       </AppBar>
-      <Main open={open}>
+      <Main open={open} sx={{ p: 0, px: 1 }}>
         <DrawerHeader />
         {children}
       </Main>
