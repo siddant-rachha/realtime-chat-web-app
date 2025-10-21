@@ -98,7 +98,6 @@ export default function ChatsPage() {
       <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
         {chatList?.map((item) => (
           <Box key={item.chatId}>
-            <Divider variant="inset" component="li" />
             <ListItem
               onClick={() => handleChatClick(item)}
               sx={{
@@ -134,7 +133,7 @@ export default function ChatsPage() {
                 </IconButton>
               </Box>
             </ListItem>
-            <Divider variant="inset" component="li" />
+            <Divider component="li" />
           </Box>
         ))}
       </List>

@@ -164,6 +164,8 @@ export default function ChatDetailPage() {
           const scrollHeightAfter = container.scrollHeight;
           container.scrollTop = scrollHeightAfter - scrollHeightBefore;
         }
+      } else {
+        setEarliestTimestamp(null);
       }
     } catch (err) {
       console.error(err);
