@@ -29,7 +29,7 @@ interface ChatItem {
 
 export default function ChatsPage() {
   const router = useRouter();
-  const [chats, setChats] = useState<ChatItem[] | null>(null);
+  const [chatList, setChatList] = useState<ChatItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const {
     selectors: { user },
@@ -51,7 +51,7 @@ export default function ChatsPage() {
           body: JSON.stringify({ idToken }),
         });
         const data = await res.json();
-        setChats(data.chats || []);
+        setChatList(data.chatList || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -72,7 +72,7 @@ export default function ChatsPage() {
       </Box>
     );
 
-  if (chats && chats.length === 0)
+  if (chatList && chatList.length === 0)
     return (
       <Container sx={{ mt: 5 }}>
         <Typography variant="h6" fontFamily="monospace">
@@ -92,11 +92,11 @@ export default function ChatsPage() {
       }}
     >
       <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
-        {chats?.map((chat) => (
-          <Box key={chat.chatId}>
+        {chatList?.map((item) => (
+          <Box key={item.chatId}>
             <Divider variant="inset" component="li" />
             <ListItem
-              onClick={() => router.push(`/chats/${generateChatId(user!.uid, chat.friendUid)}`)}
+              onClick={() => router.push(`/chats/${generateChatId(user!.uid, item.friendUid)}`)}
               sx={{
                 bgcolor: theme.palette.secondary.main,
                 maxHeight: 80,
@@ -108,19 +108,19 @@ export default function ChatsPage() {
               }}
             >
               <ListItemAvatar>
-                <Avatar alt={chat.displayName} src="#" />
+                <Avatar alt={item.displayName} src="#" />
               </ListItemAvatar>
               <ListItemText
-                primary={chat.displayName}
+                primary={item.displayName}
                 slotProps={{ primary: { fontWeight: "bold" } }}
                 secondary={
-                  chat.lastMessage ? `${chat.lastMessage.slice(0, 60)}...` : `@${chat.username}`
+                  item.lastMessage ? `${item.lastMessage.slice(0, 60)}...` : `@${item.username}`
                 }
               />
               {/* open chat arrow*/}
               <Box
                 sx={{ display: "flex", alignItems: "center", justifyContent: "center", pl: 1 }}
-                onClick={() => router.push(`/chats/${generateChatId(user!.uid, chat.friendUid)}`)}
+                onClick={() => router.push(`/chats/${generateChatId(user!.uid, item.friendUid)}`)}
               >
                 <Typography variant="body2" color="primary" fontWeight="bold" noWrap p={0}>
                   Open chat

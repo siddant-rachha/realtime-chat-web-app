@@ -12,12 +12,12 @@ export async function POST(req: NextRequest) {
     const uid = decoded.uid;
 
     const chatSnap = await adminDb.ref(`chatList/${uid}`).get();
-    if (!chatSnap.exists()) return NextResponse.json({ chats: [] });
+    if (!chatSnap.exists()) return NextResponse.json({ chatList: [] });
 
     const chatData = chatSnap.val();
 
     // Prepare chat items with friend info
-    const chats = await Promise.all(
+    const chatList = await Promise.all(
       Object.entries(chatData).map(async ([chatId, chat]: any) => {
         const friendUid = chat.friendUid;
         const friendSnap = await adminDb.ref(`users/${friendUid}`).get();
@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
       }),
     );
 
-    return NextResponse.json({ chats });
+    return NextResponse.json({ chatList });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ chats: [] }, { status: 500 });
+    return NextResponse.json({ chatList: [] }, { status: 500 });
   }
 }

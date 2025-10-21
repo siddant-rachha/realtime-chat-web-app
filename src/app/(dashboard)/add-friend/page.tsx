@@ -17,7 +17,7 @@ import { useAuthContext } from "@/store/Auth/useAuthContext";
 
 export default function AddFriendPage() {
   const {
-    selectors: { user },
+    selectors: { firebaseUser, user },
   } = useAuthContext();
   const [search, setSearch] = useState("");
   const [result, setResult] = useState<{
@@ -38,7 +38,7 @@ export default function AddFriendPage() {
       const res = await fetch("/api/getFriends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: await user?.getIdToken() }),
+        body: JSON.stringify({ idToken: await firebaseUser?.getIdToken() }),
       });
       const data = await res.json();
       setFriends(data.friends || []);
@@ -71,7 +71,7 @@ export default function AddFriendPage() {
       await fetch("/api/addFriend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: await user.getIdToken(), friendUid }),
+        body: JSON.stringify({ idToken: await firebaseUser?.getIdToken(), friendUid }),
       });
       fetchFriends();
       setResult(null);
@@ -87,7 +87,7 @@ export default function AddFriendPage() {
       await fetch("/api/removeFriend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: await user.getIdToken(), friendUid }),
+        body: JSON.stringify({ idToken: await firebaseUser?.getIdToken(), friendUid }),
       });
       fetchFriends();
     } catch (err) {

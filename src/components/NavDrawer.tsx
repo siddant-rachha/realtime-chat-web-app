@@ -129,7 +129,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
         open={open}
         sx={{ height: 64, display: "flex", justifyContent: "center" }}
       >
-        <Toolbar>
+        <Toolbar sx={{ userSelect: "none" }}>
           {/* back button */}
           {isBackBtnEnabled ? (
             <Box
@@ -236,6 +236,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
       </Main>
       <Drawer
         sx={{
+          userSelect: "none",
           width: drawerWidth,
           // width: "100vw",
           flexShrink: 0,

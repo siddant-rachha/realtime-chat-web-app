@@ -1,14 +1,15 @@
 import { api } from "@/lib/axios/api";
+import { UserType } from "@/types/types";
 
 export const userApi = {
-  checkProfile: () => api.post<CheckProfileResponse>("/checkProfile"),
+  getProfile: () => api.post<GetProfileResponse>("/getProfile"),
   createUser: ({ displayName, username }: { displayName: string; username: string }) =>
     api.post<CreateUserResponse>("/createUser", { displayName, username }),
 };
 
-interface CheckProfileResponse {
-  exists: boolean;
-}
+type GetProfileResponse = UserType & {
+  error?: string;
+};
 
 interface CreateUserResponse {
   success: boolean;

@@ -3,7 +3,8 @@ import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 
 export async function POST(req: NextRequest) {
   try {
-    const { idToken } = await req.json();
+    // Get ID token from Authorization header
+    const idToken = req.headers.get("Authorization")?.split("Bearer ")[1];
     if (!idToken) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
@@ -16,12 +17,12 @@ export async function POST(req: NextRequest) {
     const snapshot = await adminDb.ref(`users/${uid}`).get();
 
     if (!snapshot.exists()) {
-      return NextResponse.json({ profile: null });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const profile = snapshot.val();
 
-    return NextResponse.json({ profile });
+    return NextResponse.json({ displayName: profile.displayName, username: profile.username, uid });
   } catch (err) {
     console.error("Error in getProfile:", err);
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });

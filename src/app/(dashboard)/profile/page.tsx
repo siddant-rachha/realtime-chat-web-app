@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Container,
   Typography,
@@ -11,48 +11,16 @@ import {
   Snackbar,
 } from "@mui/material";
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useAuthContext } from "@/store/Auth/useAuthContext";
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<{
-    displayName: string;
-    username: string;
-  } | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState(false);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          router.replace("/");
-          return;
-        }
-        const idToken = await user.getIdToken();
-        const res = await fetch("/api/getProfile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        const data = await res.json();
-        if (data.profile) {
-          setProfile(data.profile);
-          setDisplayName(data.profile.displayName || "");
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [router]);
+  const {
+    selectors: { user },
+  } = useAuthContext();
+  const [displayName, setDisplayName] = useState(user?.displayName || "");
+  const [username, setUsername] = useState(user?.username || "");
 
   const handleUpdate = async () => {
     if (!displayName.trim()) return alert("Display name cannot be empty");
@@ -64,7 +32,7 @@ export default function ProfilePage() {
       await fetch("/api/updateProfile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, displayName }),
+        body: JSON.stringify({ idToken, displayName, username }),
       });
       setSnackbar(true);
     } catch (err) {
@@ -75,27 +43,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.replace("/");
-  };
-
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!profile) {
+  if (!user) {
     return (
       <Container sx={{ mt: 10, textAlign: "center" }}>
         <Typography variant="h6">Profile not found.</Typography>
@@ -110,7 +58,13 @@ export default function ProfilePage() {
       </Typography>
 
       <Box sx={{ mt: 3 }}>
-        <TextField label="Username" value={profile.username} fullWidth margin="normal" disabled />
+        <TextField
+          label="Username"
+          value={user?.username}
+          fullWidth
+          margin="normal"
+          onChange={(e) => setUsername(e.target.value)}
+        />
         <TextField
           label="Display Name"
           value={displayName}
@@ -123,9 +77,6 @@ export default function ProfilePage() {
       <Box sx={{ display: "flex", gap: 2, mt: 4 }}>
         <Button variant="contained" color="primary" onClick={handleUpdate} disabled={saving}>
           {saving ? <CircularProgress size={22} color="inherit" /> : "Update"}
-        </Button>
-        <Button variant="outlined" color="secondary" onClick={handleLogout}>
-          Logout
         </Button>
       </Box>
 

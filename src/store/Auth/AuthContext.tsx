@@ -5,18 +5,21 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { usePathname, useRouter } from "next/navigation";
 import { userApi } from "@/apiService/userApi";
+import { UserType } from "@/types/types";
 
 interface AuthContextType {
   selectors: {
-    user: User | null;
+    user: UserType | null;
     userLoading: boolean;
+    firebaseUser: User | null;
   };
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userLoading, setUserLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -30,10 +33,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // check if user profile exists
       if (firebaseUser) {
-        const { exists } = await userApi.checkProfile();
-        if (!exists) {
+        setFirebaseUser(firebaseUser);
+        const userResponse = await userApi.getProfile();
+        if (!userResponse.displayName) {
           router.replace("/setup-profile");
         } else {
+          setUser(userResponse);
+
           // User has profile, proceed to chats
           if (pathname === "/" || pathname === "/setup-profile") {
             router.replace("/chats");
@@ -41,7 +47,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      setUser(firebaseUser);
       setUserLoading(false);
     });
     return () => unsubscribe();
@@ -49,9 +54,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = useMemo(
     () => ({
-      selectors: { user, userLoading },
+      selectors: { user, userLoading, firebaseUser },
     }),
-    [user, userLoading],
+    [user, userLoading, firebaseUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
