@@ -24,6 +24,8 @@ import {
 import { database as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
 import theme from "@/app/theme";
+import { userApi } from "@/apiService/userApi";
+import { useNavContext } from "@/store/NavDrawer/useNavContext";
 
 interface Message {
   id: string;
@@ -40,6 +42,9 @@ export default function ChatDetailPage() {
   const {
     selectors: { user },
   } = useAuthContext();
+  const {
+    actions: { setNavTitle },
+  } = useNavContext();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -59,6 +64,20 @@ export default function ChatDetailPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // get friend name using uid
+  useEffect(() => {
+    const getFriendName = async () => {
+      try {
+        const { user } = await userApi.searchUser({ userUid: friendUid });
+
+        setNavTitle(`(${user?.displayName})`);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    getFriendName();
+  }, []);
 
   // 🔹 Load initial messages
   useEffect(() => {

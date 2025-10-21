@@ -15,29 +15,31 @@ export default function SetupProfilePage() {
     selectors: { user },
   } = useAuthContext();
 
-  // Regex for Instagram-style usernames
-  const usernameRegex = /^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{1,30}$/;
-
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
+    // max 25
+    if (value.length > 25) return;
+
     // Only allow valid characters in input
     if (/^[a-zA-Z0-9._]*$/.test(value)) {
-      setUsername(value);
+      setUsername(value.toLowerCase());
     }
+  };
+
+  const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // 25 Max
+    if (value.length > 25) return;
+
+    setDisplayName(value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!displayName || !username) return alert("All fields required.");
-
-    // Validate username
-    if (!usernameRegex.test(username)) {
-      return alert(
-        "Invalid username. Only letters, numbers, underscores, and dots are allowed. Cannot end with dot or have consecutive dots.",
-      );
-    }
 
     setCreating(true);
     try {
@@ -49,7 +51,7 @@ export default function SetupProfilePage() {
       });
 
       alert("Profile created!");
-      router.replace("/chats");
+      router.push("/");
     } catch (err) {
       alert((err as Error).message);
     } finally {
@@ -58,7 +60,7 @@ export default function SetupProfilePage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
+    <Container maxWidth="sm" sx={{ mt: 12 }}>
       <Typography variant="h5" gutterBottom>
         Setup your profile
       </Typography>
@@ -68,7 +70,7 @@ export default function SetupProfilePage() {
           fullWidth
           label="Display Name"
           value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
+          onChange={handleDisplayNameChange}
           sx={{ mb: 2 }}
         />
         <TextField

@@ -1,26 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Container,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  CircularProgress,
-  Snackbar,
-} from "@mui/material";
+import { Container, Typography, TextField, Button, Box, CircularProgress } from "@mui/material";
 import { auth } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState(false);
   const {
     selectors: { user },
   } = useAuthContext();
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [username, setUsername] = useState(user?.username || "");
+  const router = useRouter();
 
   const handleUpdate = async () => {
     if (!displayName.trim()) return alert("Display name cannot be empty");
@@ -34,7 +27,8 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken, displayName, username }),
       });
-      setSnackbar(true);
+      alert("Profile updated!");
+      router.push("/");
     } catch (err) {
       console.error(err);
       alert("Failed to update profile");
@@ -43,32 +37,53 @@ export default function ProfilePage() {
     }
   };
 
+  const handleUserNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // 25 Max
+    if (value.length > 25) return;
+
+    // Only allow valid characters in input
+    if (/^[a-zA-Z0-9._]*$/.test(value)) {
+      setUsername(value.toLowerCase());
+    }
+  };
+
+  const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // 25 Max
+    if (value.length > 25) return;
+
+    setDisplayName(value);
+  };
+
   if (!user) {
     return (
-      <Container sx={{ mt: 10, textAlign: "center" }}>
+      <Container sx={{ mt: 12, textAlign: "center" }}>
         <Typography variant="h6">Profile not found.</Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
-      <Typography variant="h4" gutterBottom>
-        Your Profile
+    <Container maxWidth="sm" sx={{ mt: 12 }}>
+      <Typography variant="h6" gutterBottom>
+        My Profile
       </Typography>
 
       <Box sx={{ mt: 3 }}>
         <TextField
           label="Username"
-          value={user?.username}
+          value={username}
           fullWidth
           margin="normal"
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={handleUserNameChange}
         />
         <TextField
           label="Display Name"
           value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
+          onChange={handleDisplayNameChange}
           fullWidth
           margin="normal"
         />
@@ -79,13 +94,6 @@ export default function ProfilePage() {
           {saving ? <CircularProgress size={22} color="inherit" /> : "Update"}
         </Button>
       </Box>
-
-      <Snackbar
-        open={snackbar}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar(false)}
-        message="Profile updated successfully"
-      />
     </Container>
   );
 }

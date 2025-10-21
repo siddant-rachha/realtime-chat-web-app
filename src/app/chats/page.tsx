@@ -39,6 +39,10 @@ export default function ChatsPage() {
     return [uid1, uid2].sort().join("_");
   };
 
+  const handleChatClick = (item: { friendUid: string; displayName: string }) => {
+    router.push(`/chats/${generateChatId(user!.uid, item.friendUid)}`);
+  };
+
   useEffect(() => {
     // need to implement axios
     const fetchChats = async () => {
@@ -74,7 +78,7 @@ export default function ChatsPage() {
 
   if (chatList && chatList.length === 0)
     return (
-      <Container sx={{ mt: 5 }}>
+      <Container sx={{ mt: 12 }}>
         <Typography variant="h6" fontFamily="monospace">
           No chats yet. Add friends to start chatting!
         </Typography>
@@ -96,7 +100,7 @@ export default function ChatsPage() {
           <Box key={item.chatId}>
             <Divider variant="inset" component="li" />
             <ListItem
-              onClick={() => router.push(`/chats/${generateChatId(user!.uid, item.friendUid)}`)}
+              onClick={() => handleChatClick(item)}
               sx={{
                 bgcolor: theme.palette.secondary.main,
                 maxHeight: 80,
@@ -120,7 +124,7 @@ export default function ChatsPage() {
               {/* open chat arrow*/}
               <Box
                 sx={{ display: "flex", alignItems: "center", justifyContent: "center", pl: 1 }}
-                onClick={() => router.push(`/chats/${generateChatId(user!.uid, item.friendUid)}`)}
+                onClick={() => handleChatClick(item)}
               >
                 <Typography variant="body2" color="primary" fontWeight="bold" noWrap p={0}>
                   Open chat

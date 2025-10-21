@@ -5,6 +5,8 @@ export const userApi = {
   getProfile: () => api.post<GetProfileResponse>("/getProfile"),
   createUser: ({ displayName, username }: { displayName: string; username: string }) =>
     api.post<CreateUserResponse>("/createUser", { displayName, username }),
+  searchUser: ({ username, userUid }: { username?: string; userUid?: string }) =>
+    api.post<SearchUserResponse>("/searchUser", { username, userUid }),
 };
 
 type GetProfileResponse = UserType & {
@@ -13,5 +15,10 @@ type GetProfileResponse = UserType & {
 
 interface CreateUserResponse {
   success: boolean;
+  error?: string;
+}
+
+interface SearchUserResponse {
+  user: UserType | null;
   error?: string;
 }

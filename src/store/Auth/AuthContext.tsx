@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUserLoading(false);
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [router, pathname]);
 
   const value = useMemo(
     () => ({

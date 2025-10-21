@@ -96,7 +96,7 @@ export default function AddFriendPage() {
   };
 
   return (
-    <Container sx={{ mt: 3 }}>
+    <Container sx={{ mt: 12 }}>
       <Box sx={{ display: "flex", mb: 2 }}>
         <TextField
           fullWidth

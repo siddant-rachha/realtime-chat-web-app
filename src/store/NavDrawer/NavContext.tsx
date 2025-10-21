@@ -8,6 +8,9 @@ interface NavContextType {
     navTitle: string;
     isBackBtnEnabled?: boolean;
   };
+  actions: {
+    setNavTitle: (title: string) => void;
+  };
 }
 
 export const NavContext = createContext<NavContextType | undefined>(undefined);
@@ -34,6 +37,9 @@ export const NavProvider = ({ children }: { children: React.ReactNode }) => {
       case "/":
         setNavTitle("Welcome! Sign In to start");
         break;
+      case `/chats/${chatId}`:
+        // do nothing
+        break;
       default:
         setNavTitle("");
     }
@@ -42,8 +48,9 @@ export const NavProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo(() => {
     return {
       selectors: { navTitle, isBackBtnEnabled: pathname === `/chats/${chatId}` },
+      actions: { setNavTitle },
     };
-  }, [navTitle, pathname, chatId]);
+  }, [navTitle, pathname, chatId, setNavTitle]);
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;
 };

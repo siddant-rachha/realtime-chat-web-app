@@ -118,6 +118,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
 
   const logoutHandler = async () => {
     await signOut(auth);
+    localStorage.removeItem("idToken");
     router.replace("/");
   };
 
@@ -138,8 +139,8 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
                 router.replace("/chats");
               }}
             >
-              <ArrowBackIcon sx={{ width: 18, height: 18 }} />
-              Back
+              <ArrowBackIcon sx={{ width: 16, height: 16 }} />
+              <Typography sx={{ fontFamily: "monospace", fontSize: 12 }}>Back</Typography>
             </Box>
           ) : (
             <>
@@ -189,7 +190,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
             sx={{ marginLeft: 1, marginRight: 1, backgroundColor: "white" }}
           />
           <Typography
-            fontSize={12}
+            fontSize={10}
             component="div"
             sx={{ textAlign: "center", fontFamily: "fantasy" }}
           >

@@ -12,7 +12,25 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(idToken);
     const uid = decoded.uid;
 
-    // Update only displayName field
+    const usernameRegex = /^[a-zA-Z0-9._]{1,25}$/;
+    // Validate username format
+    if (username && !usernameRegex.test(username)) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid username. Only letters, numbers, underscores, dots allowed. Cannot end with dot or have consecutive dots. Max 25 characters.",
+        },
+        { status: 400 },
+      );
+    }
+    if (displayName && displayName.length > 25) {
+      return NextResponse.json(
+        {
+          error: "Invalid display name. Max 25 characters.",
+        },
+        { status: 400 },
+      );
+    }
     await adminDb.ref(`users/${uid}`).update({
       username: username || "",
       displayName: displayName || "",
