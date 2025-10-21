@@ -140,7 +140,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
               }}
             >
               <ArrowBackIcon sx={{ width: 16, height: 16 }} />
-              <Typography sx={{ fontFamily: "monospace", fontSize: 12 }}>Back</Typography>
+              <Typography sx={{ fontFamily: "monospace", fontSize: 14 }}>Back</Typography>
             </Box>
           ) : (
             <>

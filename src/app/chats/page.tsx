@@ -31,6 +31,7 @@ export default function ChatsPage() {
   const router = useRouter();
   const [chatList, setChatList] = useState<ChatItem[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const {
     selectors: { user },
   } = useAuthContext();
@@ -40,6 +41,7 @@ export default function ChatsPage() {
   };
 
   const handleChatClick = (item: { friendUid: string; displayName: string }) => {
+    setOpen(true);
     router.push(`/chats/${generateChatId(user!.uid, item.friendUid)}`);
   };
 
@@ -96,6 +98,28 @@ export default function ChatsPage() {
       }}
     >
       <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
+        {/* overlay box */}
+        {open && (
+          <Box
+            sx={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              zIndex: 10,
+              opacity: 0.5,
+              bgcolor: "background.default",
+            }}
+          >
+            <CircularProgress
+              sx={{
+                position: "relative",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+          </Box>
+        )}
         {chatList?.map((item) => (
           <Box key={item.chatId}>
             <ListItem
