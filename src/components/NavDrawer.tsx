@@ -223,8 +223,14 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
         </Toolbar>
       </AppBar>
       <Main open={open} sx={{ p: 0, px: 1, height: "100vh" }}>
-        <Box sx={{ maxWidth: "900px", margin: "auto", height: `calc(100vh - 64px)` }}>
-          <DrawerHeader />
+        <Box
+          sx={{
+            maxWidth: "900px",
+            margin: "auto",
+            height: `calc(100vh - 64px)`,
+            marginTop: "64px",
+          }}
+        >
           {children}
         </Box>
       </Main>

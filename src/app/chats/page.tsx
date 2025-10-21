@@ -64,7 +64,7 @@ export default function ChatsPage() {
 
   if (loading)
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 5 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 12 }}>
         <Typography variant="h6" fontFamily="monospace">
           Loading chats...
         </Typography>
@@ -91,7 +91,7 @@ export default function ChatsPage() {
         padding: 0,
       }}
     >
-      <List sx={{ width: "100%", bgcolor: "background.paper", cursor: "pointer" }}>
+      <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
         {chats?.map((chat) => (
           <Box key={chat.chatId}>
             <Divider variant="inset" component="li" />
@@ -104,6 +104,7 @@ export default function ChatsPage() {
                 mb: 1,
                 mt: 1,
                 borderRadius: 2,
+                cursor: "pointer",
               }}
             >
               <ListItemAvatar>
