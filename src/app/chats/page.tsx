@@ -29,7 +29,7 @@ interface ChatItem {
 
 export default function ChatsPage() {
   const router = useRouter();
-  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [chats, setChats] = useState<ChatItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const {
     selectors: { user },
@@ -40,7 +40,9 @@ export default function ChatsPage() {
   };
 
   useEffect(() => {
+    // need to implement axios
     const fetchChats = async () => {
+      setLoading(true);
       try {
         const idToken = localStorage.getItem("idToken");
         const res = await fetch("/api/getChats", {
@@ -60,12 +62,22 @@ export default function ChatsPage() {
     fetchChats();
   }, []);
 
-  if (loading) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
+  if (loading)
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 5 }}>
+        <Typography variant="h6" fontFamily="monospace">
+          Loading chats...
+        </Typography>
+        <CircularProgress />
+      </Box>
+    );
 
-  if (!chats.length)
+  if (chats && chats.length === 0)
     return (
       <Container sx={{ mt: 5 }}>
-        <Typography>No chats yet. Add friends to start chatting!</Typography>
+        <Typography variant="h6" fontFamily="monospace">
+          No chats yet. Add friends to start chatting!
+        </Typography>
       </Container>
     );
 
@@ -79,16 +91,16 @@ export default function ChatsPage() {
         padding: 0,
       }}
     >
-      <List sx={{ width: "100%", maxWidth: 780, bgcolor: "background.paper", cursor: "pointer" }}>
-        {chats.map((chat) => (
+      <List sx={{ width: "100%", bgcolor: "background.paper", cursor: "pointer" }}>
+        {chats?.map((chat) => (
           <Box key={chat.chatId}>
             <Divider variant="inset" component="li" />
             <ListItem
               onClick={() => router.push(`/chats/${generateChatId(user!.uid, chat.friendUid)}`)}
               sx={{
                 bgcolor: theme.palette.secondary.main,
-                maxHeight: 100,
-                height: 100,
+                maxHeight: 80,
+                height: 80,
                 mb: 1,
                 mt: 1,
                 borderRadius: 2,
@@ -99,20 +111,20 @@ export default function ChatsPage() {
               </ListItemAvatar>
               <ListItemText
                 primary={chat.displayName}
+                slotProps={{ primary: { fontWeight: "bold" } }}
                 secondary={
-                  chat.lastMessage ? `${chat.lastMessage.slice(0, 80)}...` : `@${chat.username}`
+                  chat.lastMessage ? `${chat.lastMessage.slice(0, 60)}...` : `@${chat.username}`
                 }
               />
               {/* open chat arrow*/}
               <Box
-                sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                sx={{ display: "flex", alignItems: "center", justifyContent: "center", pl: 1 }}
                 onClick={() => router.push(`/chats/${generateChatId(user!.uid, chat.friendUid)}`)}
               >
-                <IconButton edge="end" aria-label="open chat">
-                  <Typography variant="body2" color="primary">
-                    Open chat
-                  </Typography>
-
+                <Typography variant="body2" color="primary" fontWeight="bold" noWrap p={0}>
+                  Open chat
+                </Typography>
+                <IconButton edge="end" aria-label="open chat" size="small" sx={{ p: 0 }}>
                   <ArrowForwardIosIcon />
                 </IconButton>
               </Box>

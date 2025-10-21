@@ -94,6 +94,7 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   // necessary for content to be below app bar
   ...theme.mixins.toolbar,
   justifyContent: "flex-start",
+  height: 64,
 }));
 
 export default function NavDrawer({ children }: { children: React.ReactNode }) {
@@ -123,7 +124,11 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" open={open}>
+      <AppBar
+        position="fixed"
+        open={open}
+        sx={{ height: 64, display: "flex", justifyContent: "center" }}
+      >
         <Toolbar>
           {/* back button */}
           {isBackBtnEnabled ? (
@@ -133,7 +138,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
                 router.replace("/chats");
               }}
             >
-              <ArrowBackIcon />
+              <ArrowBackIcon sx={{ width: 18, height: 18 }} />
               Back
             </Box>
           ) : (
@@ -217,9 +222,11 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
           </IconButton>
         </Toolbar>
       </AppBar>
-      <Main open={open} sx={{ p: 0, px: 1 }}>
-        <DrawerHeader />
-        {children}
+      <Main open={open} sx={{ p: 0, px: 1, height: "100vh" }}>
+        <Box sx={{ maxWidth: "900px", margin: "auto", height: `calc(100vh - 64px)` }}>
+          <DrawerHeader />
+          {children}
+        </Box>
       </Main>
       <Drawer
         sx={{
@@ -236,9 +243,15 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
         open={open}
       >
         <DrawerHeader>
+          <Typography
+            ml={1}
+            sx={{ cursor: "pointer", fontWeight: "bold" }}
+            onClick={handleDrawerClose}
+          >
+            Close
+          </Typography>
           <IconButton onClick={handleDrawerClose}>
             {theme.direction === "rtl" ? <ChevronLeftIcon /> : <ChevronRightIcon />}{" "}
-            <Typography ml={1}>Close</Typography>
           </IconButton>
         </DrawerHeader>
         <Divider />

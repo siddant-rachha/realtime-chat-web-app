@@ -25,12 +25,20 @@ export default function LoginPage() {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10, textAlign: "center" }}>
-      <Typography variant="h4" gutterBottom>
-        Welcome to DiHola.Vercel.App
+      <Typography variant="h6" sx={{ fontFamily: "monospace" }} gutterBottom>
+        {!loading
+          ? "Welcome to DiHola.Vercel.App 👋 Click on below sign in button to use all features."
+          : "Signing you in..., Please select your account and wait... Refresh the page if it doesn't load after a long time."}
       </Typography>
       <Box sx={{ mt: 4 }}>
         <Button variant="contained" color="primary" onClick={handleGoogleLogin} disabled={loading}>
-          {loading ? <CircularProgress size={24} color="inherit" /> : "Sign in with Google"}
+          {loading ? (
+            <>
+              <CircularProgress size={24} color="inherit" />
+            </>
+          ) : (
+            "Sign in with Google"
+          )}
         </Button>
       </Box>
     </Container>

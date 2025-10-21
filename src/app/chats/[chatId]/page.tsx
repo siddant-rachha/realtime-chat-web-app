@@ -3,18 +3,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Box,
-  Container,
-  TextField,
-  IconButton,
-  CircularProgress,
-  Typography,
-  Button,
-} from "@mui/material";
+import { Box, TextField, IconButton, CircularProgress, Typography, Button } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useParams } from "next/navigation";
 import {
   ref,
@@ -30,6 +23,7 @@ import {
 } from "firebase/database";
 import { database as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
+import theme from "@/app/theme";
 
 interface Message {
   id: string;
@@ -231,20 +225,16 @@ export default function ChatDetailPage() {
         lastTimestamp: now,
         friendUid: user.uid,
       };
-      await update(ref(db), chatListUpdates);
-
       setInput("");
       scrollToBottom();
+      await update(ref(db), chatListUpdates);
     } catch (err) {
       console.error("Error sending message:", err);
     }
   };
 
   return (
-    <Container
-      maxWidth="sm"
-      sx={{ height: "100vh", display: "flex", flexDirection: "column", pb: 2 }}
-    >
+    <>
       <Box
         ref={scrollContainerRef}
         sx={{
@@ -254,8 +244,8 @@ export default function ChatDetailPage() {
           display: "flex",
           flexDirection: "column",
           gap: 1,
-          border: "1px solid #ccc",
-          borderRadius: 2,
+          // minus 64px for header box and 64px for input box
+          height: "calc(100vh - 128px)",
         }}
       >
         <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
@@ -264,7 +254,7 @@ export default function ChatDetailPage() {
             onClick={loadOlderMessages}
             disabled={loadingMore || !earliestTimestamp}
           >
-            {loadingMore ? "Loading..." : "Load Older Messages"}
+            {loadingMore ? "Loading..." : <ArrowUpwardIcon />}
           </Button>
         </Box>
 
@@ -281,37 +271,51 @@ export default function ChatDetailPage() {
                 key={msg.id}
                 sx={{
                   alignSelf: isMine ? "flex-end" : "flex-start",
-                  backgroundColor: isMine ? "#1976d2" : "#e0e0e0",
+                  backgroundColor: isMine
+                    ? theme.palette.primary.main
+                    : theme.palette.secondary.main,
                   color: isMine ? "#fff" : "#000",
-                  borderRadius: 2,
-                  p: 1.5,
-                  maxWidth: "75%",
+
+                  borderBottomLeftRadius: isMine ? 16 : 0,
+                  borderBottomRightRadius: isMine ? 0 : 16,
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+
+                  px: 2,
+                  py: 0.5,
+                  pt: 1,
+                  maxWidth: "90%",
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
-                <Typography variant="body1">{msg.text}</Typography>
+                <Typography fontSize={14}>{msg.text}</Typography>
                 <Box
                   sx={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 0.5,
                   }}
+                  {...(isMine ? { justifyContent: "flex-end" } : { justifyContent: "flex-start" })}
                 >
-                  <Typography variant="caption" sx={{ opacity: 0.7, fontSize: "0.7rem" }}>
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </Typography>
+                  <Box
+                    display="flex"
+                    position="relative"
+                    alignItems="center"
+                    sx={isMine ? { right: -10 } : { left: -10 }}
+                  >
+                    <Typography variant="caption" fontSize={9} sx={{ opacity: 0.7 }}>
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </Typography>
 
-                  {isMine && (
-                    <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
-                      {statusForFriend === "read" ? (
-                        <DoneAllIcon sx={{ fontSize: "1rem", color: "#4FC3F7" }} />
-                      ) : (
-                        <DoneIcon sx={{ fontSize: "1rem", color: "#fff" }} />
-                      )}
-                    </Box>
-                  )}
+                    {isMine && (
+                      <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
+                        {statusForFriend === "read" ? (
+                          <DoneAllIcon sx={{ fontSize: "1rem", color: "#4FC3F7" }} />
+                        ) : (
+                          <DoneIcon sx={{ fontSize: "1rem", color: "#fff" }} />
+                        )}
+                      </Box>
+                    )}
+                  </Box>
                 </Box>
               </Box>
             );
@@ -330,7 +334,6 @@ export default function ChatDetailPage() {
           position: "sticky",
           bottom: 0,
           background: "#fff",
-          px: 2,
           py: 1,
           borderTop: "1px solid #ccc",
         }}
@@ -347,6 +350,6 @@ export default function ChatDetailPage() {
           <SendIcon />
         </IconButton>
       </Box>
-    </Container>
+    </>
   );
 }

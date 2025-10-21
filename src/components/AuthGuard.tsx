@@ -27,10 +27,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return (
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
+          position: "absolute",
+          top: "40vh",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
         }}
       >
         <CircularProgress />
