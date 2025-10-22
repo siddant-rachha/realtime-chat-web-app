@@ -276,16 +276,16 @@ export default function ChatDetailPage() {
 
   // Send message
   const handleSend = async () => {
-    if (!inputRef.current) return;
-
-    const textToSend = inputRef.current.value.trim();
-    if (!textToSend) return;
+    if (!inputRef.current?.value.trim()) return;
 
     try {
-      await messageApi.sendMessage({ chatId: chatId as string, text: textToSend });
-      inputRef.current.value = "";
+      inputRef.current.focus();
+      await messageApi.sendMessage({ chatId: chatId as string, text: inputRef.current.value });
 
-      scrollToBottom();
+      inputRef.current.value = "";
+      inputRef.current.focus();
+
+      setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -417,12 +417,16 @@ export default function ChatDetailPage() {
           fullWidth
           size="small"
           placeholder="Type a message..."
-          // multiline
+          multiline
           inputRef={inputRef}
-          maxRows={5}
+          maxRows={4}
         />
-        <IconButton color="primary" onClick={handleSend}>
-          <SendIcon sx={{ fontSize: 28 }} />
+        <IconButton
+          color="primary"
+          onClick={handleSend}
+          tabIndex={-1} // ⬅️ prevents focusing
+        >
+          <SendIcon />
         </IconButton>
       </Box>
     </>
