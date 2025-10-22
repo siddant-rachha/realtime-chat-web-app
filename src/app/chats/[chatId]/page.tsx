@@ -276,14 +276,16 @@ export default function ChatDetailPage() {
 
   // Send message
   const handleSend = async () => {
-    if (!inputRef.current?.value.trim()) return;
-    const textToSend = inputRef.current.value;
+    if (!inputRef.current) return;
+
+    const textToSend = inputRef.current.value.trim();
+    if (!textToSend) return;
 
     try {
       await messageApi.sendMessage({ chatId: chatId as string, text: textToSend });
-      inputRef.current.value = ""; // clear input manually
+      inputRef.current.value = "";
       scrollToBottom();
-      inputRef.current.focus(); // keep keyboard open
+      inputRef.current.focus();
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -325,16 +327,8 @@ export default function ChatDetailPage() {
             const now = new Date();
             const yesterday = new Date();
             yesterday.setDate(now.getDate() - 1);
-
-            const isToday =
-              date.getDate() === now.getDate() &&
-              date.getMonth() === now.getMonth() &&
-              date.getFullYear() === now.getFullYear();
-            const isYesterday =
-              date.getDate() === yesterday.getDate() &&
-              date.getMonth() === yesterday.getMonth() &&
-              date.getFullYear() === yesterday.getFullYear();
-
+            const isToday = date.toDateString() === now.toDateString();
+            const isYesterday = date.toDateString() === yesterday.toDateString();
             const timeString = date.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -423,12 +417,10 @@ export default function ChatDetailPage() {
           fullWidth
           size="small"
           placeholder="Type a message..."
-          defaultValue="" // ✅ keyboard-safe
           multiline
           inputRef={inputRef}
           maxRows={5}
           InputProps={{ autoComplete: "off" }}
-          onChange={(e) => {}}
         />
         <IconButton color="primary" onClick={handleSend}>
           <SendIcon sx={{ fontSize: 28 }} />
