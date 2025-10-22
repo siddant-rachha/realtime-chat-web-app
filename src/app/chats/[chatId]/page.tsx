@@ -52,6 +52,7 @@ export default function ChatDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [earliestTimestamp, setEarliestTimestamp] = useState<number | null>(null);
+  const [sending, setSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -276,8 +277,9 @@ export default function ChatDetailPage() {
 
   // Send message
   const handleSend = async () => {
-    if (!inputRef.current?.value.trim()) return;
+    if (!inputRef.current?.value.trim() || sending) return; // Prevent multiple sends
 
+    setSending(true);
     try {
       inputRef.current.focus();
       await messageApi.sendMessage({ chatId: chatId as string, text: inputRef.current.value });
@@ -288,6 +290,8 @@ export default function ChatDetailPage() {
       setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error("Error sending message:", err);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -424,9 +428,11 @@ export default function ChatDetailPage() {
         <IconButton
           color="primary"
           onClick={handleSend}
-          tabIndex={-1} // ⬅️ prevents focusing
+          tabIndex={-1} // prevents focusing
+          size="large"
+          disabled={sending} // disable while sending
         >
-          <SendIcon />
+          {sending ? <CircularProgress size={24} /> : <SendIcon />}
         </IconButton>
       </Box>
     </>
