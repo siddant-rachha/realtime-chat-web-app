@@ -49,7 +49,6 @@ export default function ChatDetailPage() {
   } = useNavContext();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [earliestTimestamp, setEarliestTimestamp] = useState<number | null>(null);
@@ -277,12 +276,14 @@ export default function ChatDetailPage() {
 
   // Send message
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!inputRef.current?.value.trim()) return;
+    const textToSend = inputRef.current.value;
+
     try {
-      await messageApi.sendMessage({ chatId: chatId as string, text: input });
-      inputRef.current?.focus(); // keep focus before clearing
-      setInput(""); // now clear after focus
-      setTimeout(scrollToBottom, 100);
+      await messageApi.sendMessage({ chatId: chatId as string, text: textToSend });
+      inputRef.current.value = ""; // clear input manually
+      scrollToBottom();
+      inputRef.current.focus(); // keep keyboard open
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -422,11 +423,12 @@ export default function ChatDetailPage() {
           fullWidth
           size="small"
           placeholder="Type a message..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          defaultValue="" // ✅ keyboard-safe
           multiline
           inputRef={inputRef}
           maxRows={5}
+          InputProps={{ autoComplete: "off" }}
+          onChange={(e) => {}}
         />
         <IconButton color="primary" onClick={handleSend}>
           <SendIcon sx={{ fontSize: 28 }} />
