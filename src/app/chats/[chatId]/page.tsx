@@ -17,6 +17,7 @@ import {
   orderByChild,
   limitToLast,
   endAt,
+  startAfter,
   onChildAdded,
   onChildChanged,
 } from "firebase/database";
@@ -55,7 +56,8 @@ export default function ChatDetailPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageIds = useRef<Set<string>>(new Set());
-  const initializedRef = useRef(false); // ✅ track initial load
+  const initializedRef = useRef(false);
+  const count = useRef(0);
 
   if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
@@ -78,47 +80,13 @@ export default function ChatDetailPage() {
     getFriendName();
   }, []);
 
-  // Load initial messages + attach listeners
+  // Load initial messages + attach listener for new ones
   useEffect(() => {
     const messagesRef = ref(db, `chats/${chatId}`);
     const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
 
-    // New messages listener
-    const unsubscribeAdded = onChildAdded(messagesRef, (snap) => {
-      if (!initializedRef.current) return; // ignore until initial load done
-
-      const data = snap.val();
-      const newMsg: Message = {
-        id: snap.key!,
-        senderUid: data.senderUid,
-        text: data.text,
-        timestamp: Number(data.timestamp),
-        status: data.status || {},
-      };
-
-      setMessages((prev) => {
-        if (messageIds.current.has(newMsg.id)) return prev;
-        messageIds.current.add(newMsg.id);
-        const sorted = [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
-        return sorted;
-      });
-
-      setTimeout(() => scrollToBottom(), 50);
-    });
-
-    // Updates listener
-    const unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
-      const updatedData = snap.val();
-      setMessages((prev) =>
-        prev
-          .map((m) =>
-            m.id === snap.key
-              ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
-              : m,
-          )
-          .sort((a, b) => a.timestamp - b.timestamp),
-      );
-    });
+    let unsubscribeAdded: (() => void) | null = null;
+    let unsubscribeChanged: (() => void) | null = null;
 
     // Initial load
     get(initialQuery)
@@ -133,12 +101,44 @@ export default function ChatDetailPage() {
           msgs.sort((a, b) => a.timestamp - b.timestamp);
           setMessages(msgs);
           msgs.forEach((m) => messageIds.current.add(m.id));
-          if (msgs.length > 0) setEarliestTimestamp(msgs[0].timestamp);
+
+          if (msgs.length > 0) {
+            setEarliestTimestamp(msgs[0].timestamp);
+            const latestTimestamp = msgs[msgs.length - 1].timestamp;
+
+            // ✅ Only listen for new messages after latest timestamp
+            const newMessagesQuery = query(
+              messagesRef,
+              orderByChild("timestamp"),
+              startAfter(latestTimestamp),
+            );
+
+            unsubscribeAdded = onChildAdded(newMessagesQuery, (snap) => {
+              console.log(`I ran ${count.current++} times`);
+              const data = snap.val();
+              if (!data) return;
+
+              const newMsg: Message = {
+                id: snap.key!,
+                senderUid: data.senderUid,
+                text: data.text,
+                timestamp: Number(data.timestamp),
+                status: data.status || {},
+              };
+
+              if (messageIds.current.has(newMsg.id)) return;
+              messageIds.current.add(newMsg.id);
+
+              setMessages((prev) => [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp));
+
+              setTimeout(scrollToBottom, 50);
+            });
+          }
         }
 
         setLoading(false);
-        setTimeout(() => scrollToBottom(), 100);
-        initializedRef.current = true; // ✅ mark initial load done
+        setTimeout(scrollToBottom, 100);
+        initializedRef.current = true;
       })
       .catch((err) => {
         console.error(err);
@@ -146,9 +146,23 @@ export default function ChatDetailPage() {
         initializedRef.current = true;
       });
 
+    // Updates listener (for read status etc.)
+    unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
+      const updatedData = snap.val();
+      setMessages((prev) =>
+        prev
+          .map((m) =>
+            m.id === snap.key
+              ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
+              : m,
+          )
+          .sort((a, b) => a.timestamp - b.timestamp),
+      );
+    });
+
     return () => {
-      unsubscribeAdded();
-      unsubscribeChanged();
+      if (unsubscribeAdded) unsubscribeAdded();
+      if (unsubscribeChanged) unsubscribeChanged();
     };
   }, [chatId]);
 
@@ -223,7 +237,7 @@ export default function ChatDetailPage() {
     try {
       await messageApi.sendMessage({ chatId: chatId as string, text: input });
       setInput("");
-      setTimeout(() => scrollToBottom(), 50);
+      setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error("Error sending message:", err);
     }
