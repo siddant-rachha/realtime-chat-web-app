@@ -1,12 +1,20 @@
 "use client";
 
-import React, { createContext, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
+import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { usePathname, useRouter } from "next/navigation";
 import { userApi } from "@/apiService/userApi";
 import { UserType } from "@/types/types";
-import { getDatabase, onDisconnect, ref, serverTimestamp, set, onValue } from "firebase/database";
+import {
+  getDatabase,
+  onDisconnect,
+  ref,
+  serverTimestamp,
+  set,
+  onValue,
+  update,
+} from "firebase/database";
 
 interface AuthContextType {
   selectors: {
@@ -24,48 +32,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userLoading, setUserLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const lastUidRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      const idToken = await firebaseUser?.getIdToken();
-      if (idToken) {
-        localStorage.setItem("idToken", idToken);
-      }
+    const db = getDatabase();
+    let userStatusRef: ReturnType<typeof ref> | null = null;
 
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setFirebaseUser(firebaseUser);
+        lastUidRef.current = firebaseUser.uid;
 
-        // ✅ REALTIME PRESENCE TRACKING
-        const db = getDatabase();
-        const userStatusRef = ref(db, `status/${firebaseUser.uid}`);
+        // ✅ Save ID token
+        const idToken = await firebaseUser.getIdToken();
+        localStorage.setItem("idToken", idToken);
+
+        // ✅ Presence tracking setup
+        userStatusRef = ref(db, `status/${firebaseUser.uid}`);
         const connectedRef = ref(db, ".info/connected");
 
         const isOfflineForDatabase = {
           state: "offline",
           last_changed: serverTimestamp(),
         };
-
         const isOnlineForDatabase = {
           state: "online",
           last_changed: serverTimestamp(),
         };
 
-        // 🔥 Listen for realtime connection state
         onValue(connectedRef, (snapshot) => {
-          if (snapshot.val() === false) {
-            // Not connected to Firebase Realtime Database
-            return;
-          }
-
-          // When online, setup disconnect + set online
-          onDisconnect(userStatusRef)
+          if (snapshot.val() === false) return;
+          onDisconnect(userStatusRef!)
             .set(isOfflineForDatabase)
             .then(() => {
-              set(userStatusRef, isOnlineForDatabase);
+              set(userStatusRef!, isOnlineForDatabase);
             });
         });
 
-        // ✅ EXISTING PROFILE FETCH LOGIC
+        // ✅ Fetch profile
         const userResponse = await userApi.getProfile();
         if (!userResponse.displayName) {
           router.replace("/setup-profile");
@@ -76,9 +80,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
       } else {
-        // When logged out
+        // 🔥 LOGOUT / SESSION END
+        const lastUid = lastUidRef.current;
+        if (lastUid) {
+          const statusRef = ref(db, `status/${lastUid}`);
+          await update(statusRef, {
+            state: "offline",
+            last_changed: serverTimestamp(),
+          });
+        }
+
         setFirebaseUser(null);
         setUser(null);
+        localStorage.removeItem("idToken");
+        lastUidRef.current = null;
       }
 
       setUserLoading(false);
@@ -86,6 +101,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsubscribe();
   }, [router, pathname]);
+
+  // ✅ Optional: handle tab close or refresh cleanly
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const db = getDatabase();
+    const statusRef = ref(db, `status/${firebaseUser.uid}`);
+
+    const handleUnload = () => {
+      set(statusRef, {
+        state: "offline",
+        last_changed: Date.now(),
+      });
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [firebaseUser]);
 
   const value = useMemo(
     () => ({
