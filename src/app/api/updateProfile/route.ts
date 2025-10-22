@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { ServerValue } from "firebase-admin/database";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     await adminDb.ref(`users/${uid}`).update({
       username: username || "",
       displayName: displayName || "",
-      updatedAt: Date.now(),
+      updatedAt: ServerValue.TIMESTAMP,
     });
 
     return NextResponse.json({ success: true });

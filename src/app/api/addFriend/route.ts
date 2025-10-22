@@ -1,6 +1,7 @@
 // /api/addFriend.ts
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
+import { ServerValue } from "firebase-admin/database";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cannot add yourself" }, { status: 400 });
     }
 
-    const timestamp = Date.now();
+    const timestamp = ServerValue.TIMESTAMP;
 
     // Deterministic chatId
     const chatId = [uid, friendUid].sort().join("_");

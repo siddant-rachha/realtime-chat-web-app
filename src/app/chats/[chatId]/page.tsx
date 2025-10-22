@@ -13,7 +13,6 @@ import {
   ref,
   query,
   get,
-  push,
   update,
   orderByChild,
   limitToLast,
@@ -26,6 +25,7 @@ import { useAuthContext } from "@/store/Auth/useAuthContext";
 import theme from "@/app/theme";
 import { userApi } from "@/apiService/userApi";
 import { useNavContext } from "@/store/NavDrawer/useNavContext";
+import { messageApi } from "@/apiService/messageApi";
 
 interface Message {
   id: string;
@@ -220,35 +220,13 @@ export default function ChatDetailPage() {
   // 🔹 Send message
   const handleSend = async () => {
     if (!input.trim()) return;
-
     try {
-      const message = {
-        senderUid: user.uid,
-        text: input.trim(),
-        timestamp: Date.now(),
-        status: { [friendUid]: "sent" },
-        edited: false,
-        deleted: false,
-      };
-
-      const newMsgRef = push(ref(db, `chats/${chatId}`));
-      await update(newMsgRef, message);
-
-      const now = Date.now();
-      const chatListUpdates: Record<string, any> = {};
-      chatListUpdates[`chatList/${user.uid}/${chatId}`] = {
-        lastMessage: message.text,
-        lastTimestamp: now,
-        friendUid,
-      };
-      chatListUpdates[`chatList/${friendUid}/${chatId}`] = {
-        lastMessage: message.text,
-        lastTimestamp: now,
-        friendUid: user.uid,
-      };
+      await messageApi.sendMessage({
+        chatId: chatId as string,
+        text: input,
+      });
       setInput("");
       scrollToBottom();
-      await update(ref(db), chatListUpdates);
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -324,7 +302,40 @@ export default function ChatDetailPage() {
                     sx={isMine ? { right: -10 } : { left: -10 }}
                   >
                     <Typography variant="caption" fontSize={9} sx={{ opacity: 0.7 }}>
-                      {new Date(msg.timestamp).toLocaleTimeString()}
+                      {(() => {
+                        const date = new Date(msg.timestamp);
+                        const now = new Date();
+
+                        const isToday =
+                          date.getDate() === now.getDate() &&
+                          date.getMonth() === now.getMonth() &&
+                          date.getFullYear() === now.getFullYear();
+
+                        const yesterday = new Date();
+                        yesterday.setDate(now.getDate() - 1);
+                        const isYesterday =
+                          date.getDate() === yesterday.getDate() &&
+                          date.getMonth() === yesterday.getMonth() &&
+                          date.getFullYear() === yesterday.getFullYear();
+
+                        const timeString = date.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        });
+
+                        if (isToday) return `Today, ${timeString}`;
+                        if (isYesterday) return `Yesterday, ${timeString}`;
+
+                        return date.toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        });
+                      })()}
                     </Typography>
 
                     {isMine && (

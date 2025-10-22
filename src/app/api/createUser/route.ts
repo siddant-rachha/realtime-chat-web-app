@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
+import { ServerValue } from "firebase-admin/database";
 
 // Regex for Instagram-style usernames
 const usernameRegex = /^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{1,30}$/;
@@ -48,9 +49,9 @@ export async function POST(req: NextRequest) {
       username,
       email,
       photoURL,
-      lastSeen: Date.now(),
+      lastSeen: ServerValue.TIMESTAMP,
       friends: {},
-      createdAt: Date.now(),
+      createdAt: ServerValue.TIMESTAMP,
     };
 
     // 7️⃣ Atomic write: user + username index
