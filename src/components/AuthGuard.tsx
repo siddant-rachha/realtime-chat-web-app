@@ -11,17 +11,17 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const {
-    selectors: { user, userLoading },
+    selectors: { firebaseUser, userLoading },
   } = useAuthContext();
 
   useEffect(() => {
     if (userLoading) return;
 
     // Not logged in → only allow public routes
-    if (!user && !PUBLIC_ROUTES.includes(pathname)) {
+    if (!firebaseUser && !PUBLIC_ROUTES.includes(pathname)) {
       router.replace("/");
     }
-  }, [user, userLoading, pathname, router]);
+  }, [firebaseUser, userLoading, pathname, router]);
 
   if (userLoading) {
     return (

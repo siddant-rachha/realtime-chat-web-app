@@ -12,7 +12,7 @@ export default function SetupProfilePage() {
   const [creating, setCreating] = useState(false);
   const router = useRouter();
   const {
-    selectors: { user },
+    selectors: { firebaseUser },
   } = useAuthContext();
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +43,7 @@ export default function SetupProfilePage() {
 
     setCreating(true);
     try {
-      if (!user) throw new Error("Not logged in");
+      if (!firebaseUser) throw new Error("Not logged in");
 
       await userApi.createUser({
         displayName,
@@ -78,7 +78,7 @@ export default function SetupProfilePage() {
           label="Username"
           value={username}
           onChange={handleUsernameChange}
-          helperText="Allowed: letters, numbers, underscores, dots. No consecutive dots. Max 30 characters."
+          helperText="Allowed: letters, numbers, underscores, dots. No consecutive dots. Max 25 characters."
           sx={{ mb: 2 }}
         />
 

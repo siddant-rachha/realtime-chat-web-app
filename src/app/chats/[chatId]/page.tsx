@@ -119,84 +119,91 @@ export default function ChatDetailPage() {
     getFriendName();
   }, []);
 
-  // Load initial messages + attach listener for new ones
+  // Load initial messages + listen for new messages in real-time
   useEffect(() => {
     const messagesRef = ref(db, `chats/${chatId}`);
-    const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
 
     let unsubscribeAdded: (() => void) | null = null;
     let unsubscribeChanged: (() => void) | null = null;
 
-    // Initial load
-    get(initialQuery)
-      .then((snap) => {
+    // Load initial messages (latest PAGE_SIZE messages)
+    const loadInitialMessages = async () => {
+      try {
+        const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
+        const snap = await get(initialQuery);
+
+        let latestTimestamp = 0; // Default for new chats
+        let msgs: Message[] = [];
+
         if (snap.exists()) {
-          const msgs = Object.entries(snap.val()).map(([id, data]: any) => ({
+          msgs = Object.entries(snap.val()).map(([id, data]: any) => ({
             id,
             ...data,
             timestamp: Number(data.timestamp),
-          })) as Message[];
-
+          }));
           msgs.sort((a, b) => a.timestamp - b.timestamp);
           setMessages(msgs);
           msgs.forEach((m) => messageIds.current.add(m.id));
 
           if (msgs.length > 0) {
             setEarliestTimestamp(msgs[0].timestamp);
-            const latestTimestamp = msgs[msgs.length - 1].timestamp;
-
-            // Only listen for new messages after latest timestamp
-            const newMessagesQuery = query(
-              messagesRef,
-              orderByChild("timestamp"),
-              startAfter(latestTimestamp),
-            );
-            unsubscribeAdded = onChildAdded(newMessagesQuery, (snap) => {
-              console.log(`I ran ${count.current++} times`);
-              const data = snap.val();
-              if (!data) return;
-
-              const newMsg: Message = {
-                id: snap.key!,
-                senderUid: data.senderUid,
-                text: data.text,
-                timestamp: Number(data.timestamp),
-                status: data.status || {},
-              };
-
-              if (messageIds.current.has(newMsg.id)) return;
-              messageIds.current.add(newMsg.id);
-
-              setMessages((prev) => [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp));
-              setTimeout(scrollToBottom, 50);
-            });
+            latestTimestamp = msgs[msgs.length - 1].timestamp;
           }
         }
+
+        // ✅ Always attach listener for new messages after latest timestamp
+        const newMessagesQuery = query(
+          messagesRef,
+          orderByChild("timestamp"),
+          startAfter(latestTimestamp),
+        );
+        unsubscribeAdded = onChildAdded(newMessagesQuery, (snap) => {
+          const data = snap.val();
+          if (!data) return;
+
+          const newMsg: Message = {
+            id: snap.key!,
+            senderUid: data.senderUid,
+            text: data.text,
+            timestamp: Number(data.timestamp),
+            status: data.status || {},
+          };
+
+          // Skip duplicates
+          if (messageIds.current.has(newMsg.id)) return;
+          messageIds.current.add(newMsg.id);
+
+          setMessages((prev) => [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp));
+          setTimeout(scrollToBottom, 50);
+        });
+
+        // Listen for updates to existing messages (read status etc.)
+        unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
+          const updatedData = snap.val();
+          setMessages((prev) =>
+            prev
+              .map((m) =>
+                m.id === snap.key
+                  ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
+                  : m,
+              )
+              .sort((a, b) => a.timestamp - b.timestamp),
+          );
+        });
 
         setLoading(false);
         setTimeout(scrollToBottom, 100);
         initializedRef.current = true;
-      })
-      .catch((err) => {
-        console.error(err);
+      } catch (err) {
+        console.error("Error loading messages:", err);
         setLoading(false);
         initializedRef.current = true;
-      });
+      }
+    };
 
-    // Updates listener (for read status etc.)
-    unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
-      const updatedData = snap.val();
-      setMessages((prev) =>
-        prev
-          .map((m) =>
-            m.id === snap.key
-              ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
-              : m,
-          )
-          .sort((a, b) => a.timestamp - b.timestamp),
-      );
-    });
+    loadInitialMessages();
 
+    // Cleanup on unmount
     return () => {
       if (unsubscribeAdded) unsubscribeAdded();
       if (unsubscribeChanged) unsubscribeChanged();

@@ -1,99 +1,85 @@
 "use client";
 
 import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
-import { onAuthStateChanged, User, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { usePathname, useRouter } from "next/navigation";
-import { userApi } from "@/apiService/userApi";
-import { UserType } from "@/types/types";
+import { onAuthStateChanged, User } from "firebase/auth";
 import {
   getDatabase,
-  onDisconnect,
   ref,
-  serverTimestamp,
   set,
-  onValue,
   update,
+  onDisconnect,
+  onValue,
+  serverTimestamp,
 } from "firebase/database";
+import { auth } from "@/lib/firebase";
+import { useRouter, usePathname } from "next/navigation";
+import { userApi } from "@/apiService/userApi";
+import { UserType } from "@/types/types";
 
+// -------------------------------
+// 🔑 Context Type Definition
+// -------------------------------
 interface AuthContextType {
   selectors: {
     user: UserType | null;
-    userLoading: boolean;
     firebaseUser: User | null;
+    userLoading: boolean;
   };
 }
 
+// Create the context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// -------------------------------
+// 🧩 AuthProvider Component
+// -------------------------------
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<UserType | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [userLoading, setUserLoading] = useState(true);
+  const [user, setUser] = useState<UserType | null>(null); // Stores backend user profile
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null); // Stores Firebase Auth user
+  const [userLoading, setUserLoading] = useState(true); // Loading state until auth resolves
   const router = useRouter();
   const pathname = usePathname();
-  const lastUidRef = useRef<string | null>(null);
+  const lastUidRef = useRef<string | null>(null); // Keeps track of the last logged-in UID
 
+  // -------------------------------
+  // 👀 Watch for Firebase Auth Changes
+  // -------------------------------
   useEffect(() => {
     const db = getDatabase();
-    let userStatusRef: ReturnType<typeof ref> | null = null;
 
+    // Listener runs whenever Firebase login/logout happens
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // ✅ If user is logged in
       if (firebaseUser) {
         setFirebaseUser(firebaseUser);
         lastUidRef.current = firebaseUser.uid;
 
-        // ✅ Save ID token
+        // Save token in localStorage (for backend requests)
         const idToken = await firebaseUser.getIdToken();
         localStorage.setItem("idToken", idToken);
 
-        // ✅ Presence tracking setup
-        userStatusRef = ref(db, `status/${firebaseUser.uid}`);
-        const connectedRef = ref(db, ".info/connected");
+        // ✅ Track presence (online/offline status)
+        setupPresenceTracking(db, firebaseUser.uid);
 
-        const isOfflineForDatabase = {
-          state: "offline",
-          last_changed: serverTimestamp(),
-        };
-        const isOnlineForDatabase = {
-          state: "online",
-          last_changed: serverTimestamp(),
-        };
+        // ✅ Fetch user profile from backend
+        const userData = await userApi.getProfile();
 
-        onValue(connectedRef, (snapshot) => {
-          if (snapshot.val() === false) return;
-          onDisconnect(userStatusRef!)
-            .set(isOfflineForDatabase)
-            .then(() => {
-              set(userStatusRef!, isOnlineForDatabase);
-            });
-        });
-
-        // ✅ Fetch profile
-        const userResponse = await userApi.getProfile();
-        if (!userResponse.displayName) {
+        // If profile not set up, go to setup page
+        if (!userData.displayName) {
           router.replace("/setup-profile");
         } else {
-          setUser(userResponse);
+          setUser(userData);
+          // Redirect to /chats if on root or setup page
           if (pathname === "/" || pathname === "/setup-profile") {
             router.replace("/chats");
           }
         }
-      } else {
-        // 🔥 LOGOUT / SESSION END
-        const lastUid = lastUidRef.current;
-        if (lastUid) {
-          const statusRef = ref(db, `status/${lastUid}`);
-          await update(statusRef, {
-            state: "offline",
-            last_changed: serverTimestamp(),
-          });
-        }
+      }
 
-        setFirebaseUser(null);
-        setUser(null);
-        localStorage.removeItem("idToken");
-        lastUidRef.current = null;
+      // ❌ If user is logged out
+      else {
+        await markUserOffline(lastUidRef.current);
+        cleanupSession();
       }
 
       setUserLoading(false);
@@ -102,29 +88,73 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, [router, pathname]);
 
-  // ✅ Optional: handle tab close or refresh cleanly
+  // -------------------------------
+  // 🧹 Handle Tab Close or Refresh
+  // -------------------------------
   useEffect(() => {
     if (!firebaseUser) return;
+
     const db = getDatabase();
     const statusRef = ref(db, `status/${firebaseUser.uid}`);
 
     const handleUnload = () => {
-      set(statusRef, {
-        state: "offline",
-        last_changed: Date.now(),
-      });
+      // Mark user offline when tab closes or reloads
+      set(statusRef, { state: "offline", last_changed: Date.now() });
     };
 
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, [firebaseUser]);
 
+  // -------------------------------
+  // 🧠 Context Value
+  // -------------------------------
   const value = useMemo(
     () => ({
-      selectors: { user, userLoading, firebaseUser },
+      selectors: { user, firebaseUser, userLoading },
     }),
-    [user, userLoading, firebaseUser],
+    [user, firebaseUser, userLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
+  // ============================================================
+  // 🧩 Helper Functions
+  // ============================================================
+
+  // Setup Firebase Realtime Database presence tracking
+  function setupPresenceTracking(db: ReturnType<typeof getDatabase>, uid: string) {
+    const userStatusRef = ref(db, `status/${uid}`);
+    const connectedRef = ref(db, ".info/connected");
+
+    const offlineState = { state: "offline", last_changed: serverTimestamp() };
+    const onlineState = { state: "online", last_changed: serverTimestamp() };
+
+    // When Firebase detects connection, update presence
+    onValue(connectedRef, (snapshot) => {
+      if (snapshot.val() === false) return;
+      onDisconnect(userStatusRef)
+        .set(offlineState)
+        .then(() => set(userStatusRef, onlineState));
+    });
+  }
+
+  // Update user’s last status to offline on logout
+  async function markUserOffline(uid: string | null) {
+    if (!uid) return;
+    const db = getDatabase();
+    const statusRef = ref(db, `status/${uid}`);
+    await update(statusRef, {
+      state: "offline",
+      last_changed: serverTimestamp(),
+    });
+  }
+
+  // Clear session data on logout
+  function cleanupSession() {
+    setFirebaseUser(null);
+    setUser(null);
+    localStorage.removeItem("idToken");
+    lastUidRef.current = null;
+  }
 };

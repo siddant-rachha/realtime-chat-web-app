@@ -4,7 +4,7 @@ import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 import { ServerValue } from "firebase-admin/database";
 
 // Regex for Instagram-style usernames
-const usernameRegex = /^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{1,30}$/;
+const usernameRegex = /^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{1,25}$/;
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Invalid username. Only letters, numbers, underscores, dots allowed. Cannot end with dot or have consecutive dots. Max 30 characters.",
+            "Invalid username. Only letters, numbers, underscores, dots allowed. Cannot end with dot or have consecutive dots. Max 25 characters.",
         },
         { status: 400 },
       );
