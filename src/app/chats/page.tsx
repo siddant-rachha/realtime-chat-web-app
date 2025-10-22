@@ -99,7 +99,7 @@ export default function ChatsPage() {
     >
       <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
         {/* overlay box */}
-        {true && (
+        {open && (
           <Box
             sx={{
               position: "fixed",
