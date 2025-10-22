@@ -102,7 +102,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const {
-    selectors: { navTitle, isBackBtnEnabled },
+    selectors: { navTitle, isBackBtnEnabled, navSubTitle },
   } = useNavContext();
   const {
     selectors: { user },
@@ -182,6 +182,9 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
             sx={{ textAlign: "start", flexGrow: 1, marginLeft: 1, fontFamily: "monospace" }}
           >
             {navTitle}
+          </Typography>
+          <Typography variant="caption" sx={{ fontFamily: "monospace", fontSize: 8 }}>
+            {navSubTitle}
           </Typography>
           <Divider
             variant="middle"

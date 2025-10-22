@@ -6,10 +6,12 @@ import { useParams, usePathname } from "next/navigation";
 interface NavContextType {
   selectors: {
     navTitle: string;
+    navSubTitle: string;
     isBackBtnEnabled?: boolean;
   };
   actions: {
     setNavTitle: (title: string) => void;
+    setNavSubTitle: (title: string) => void;
   };
 }
 
@@ -17,6 +19,7 @@ export const NavContext = createContext<NavContextType | undefined>(undefined);
 
 export const NavProvider = ({ children }: { children: React.ReactNode }) => {
   const [navTitle, setNavTitle] = useState<string>("");
+  const [navSubTitle, setNavSubTitle] = useState<string>("");
   const pathname = usePathname();
   const { chatId } = useParams();
 
@@ -47,10 +50,10 @@ export const NavProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = useMemo(() => {
     return {
-      selectors: { navTitle, isBackBtnEnabled: pathname === `/chats/${chatId}` },
-      actions: { setNavTitle },
+      selectors: { navTitle, isBackBtnEnabled: pathname === `/chats/${chatId}`, navSubTitle },
+      actions: { setNavTitle, setNavSubTitle },
     };
-  }, [navTitle, pathname, chatId, setNavTitle]);
+  }, [navTitle, pathname, chatId, setNavTitle, navSubTitle, setNavSubTitle]);
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;
 };

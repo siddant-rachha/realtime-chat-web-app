@@ -20,6 +20,7 @@ import {
   startAfter,
   onChildAdded,
   onChildChanged,
+  onValue,
 } from "firebase/database";
 import { database as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
@@ -44,7 +45,7 @@ export default function ChatDetailPage() {
     selectors: { user },
   } = useAuthContext();
   const {
-    actions: { setNavTitle },
+    actions: { setNavTitle, setNavSubTitle },
   } = useNavContext();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,10 +59,48 @@ export default function ChatDetailPage() {
   const messageIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
   const count = useRef(0);
+  const [friendStatus, setFriendStatus] = useState<{ state: string; last_changed: number } | null>(
+    null,
+  );
 
   if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
   const friendUid = (chatId as string).split("_").find((uid) => uid !== user.uid)!;
+
+  // ✅ Listen for friend's online/offline updates in real-time
+  useEffect(() => {
+    const friendStatusRef = ref(db, `status/${friendUid}`);
+
+    const unsubscribe = onValue(friendStatusRef, (snap) => {
+      if (snap.exists()) setFriendStatus(snap.val());
+      else setFriendStatus(null);
+    });
+
+    return () => unsubscribe();
+  }, [friendUid]);
+
+  const getFriendStatusText = () => {
+    if (!friendStatus) return "Offline";
+    if (friendStatus.state === "online") return "Online";
+
+    const diffMs = Date.now() - friendStatus.last_changed;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "Last seen just now";
+    if (diffMin < 60) return `Last seen ${diffMin} min ago`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `Last seen ${diffHrs} hr ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    return `Last seen ${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  };
+
+  useEffect(() => {
+    const statusText = getFriendStatusText();
+    setNavSubTitle(statusText);
+
+    return () => {
+      setNavSubTitle("");
+    };
+  }, [friendStatus]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,13 +145,12 @@ export default function ChatDetailPage() {
             setEarliestTimestamp(msgs[0].timestamp);
             const latestTimestamp = msgs[msgs.length - 1].timestamp;
 
-            // ✅ Only listen for new messages after latest timestamp
+            // Only listen for new messages after latest timestamp
             const newMessagesQuery = query(
               messagesRef,
               orderByChild("timestamp"),
               startAfter(latestTimestamp),
             );
-
             unsubscribeAdded = onChildAdded(newMessagesQuery, (snap) => {
               console.log(`I ran ${count.current++} times`);
               const data = snap.val();
@@ -130,7 +168,6 @@ export default function ChatDetailPage() {
               messageIds.current.add(newMsg.id);
 
               setMessages((prev) => [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp));
-
               setTimeout(scrollToBottom, 50);
             });
           }
