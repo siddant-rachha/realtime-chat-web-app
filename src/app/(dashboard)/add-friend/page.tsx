@@ -96,13 +96,14 @@ export default function AddFriendPage() {
   };
 
   return (
-    <Container sx={{ mt: 12 }}>
-      <Box sx={{ display: "flex", mb: 2 }}>
+    <Container>
+      <Box sx={{ display: "flex", mb: 2, mt: "64px", paddingTop: 4 }}>
         <TextField
           fullWidth
-          label="Search by username"
+          label="Search by exact username"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          size="small"
         />
         <Button sx={{ ml: 2 }} variant="contained" onClick={handleSearch} disabled={loading}>
           {loading ? <CircularProgress size={24} /> : "Search"}
@@ -132,6 +133,7 @@ export default function AddFriendPage() {
                 variant="outlined"
                 color="error"
                 onClick={() => handleRemoveFriend(friend.uid)}
+                disabled
               >
                 Remove
               </Button>
@@ -141,6 +143,9 @@ export default function AddFriendPage() {
           </ListItem>
         ))}
       </List>
+      <Typography sx={{ position: "absolute", bottom: 0, opacity: 0.5 }}>
+        This page is still work in progress
+      </Typography>
     </Container>
   );
 }

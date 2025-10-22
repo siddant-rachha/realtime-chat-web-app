@@ -280,8 +280,8 @@ export default function ChatDetailPage() {
     if (!input.trim()) return;
     try {
       await messageApi.sendMessage({ chatId: chatId as string, text: input });
-      setInput("");
-      setTimeout(() => inputRef.current?.focus(), 50); // keep keyboard open on mobile
+      inputRef.current?.focus(); // keep focus before clearing
+      setInput(""); // now clear after focus
       setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error("Error sending message:", err);

@@ -99,25 +99,23 @@ export default function ChatsPage() {
     >
       <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
         {/* overlay box */}
-        {open && (
+        {true && (
           <Box
             sx={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
+              position: "fixed",
+              left: 0,
+
+              width: "100vw",
+              height: "100vh",
               zIndex: 10,
               opacity: 0.5,
               bgcolor: "background.default",
+              display: "flex",
+              justifyContent: "center", // horizontal
+              alignItems: "flex-start", // vertical
             }}
           >
-            <CircularProgress
-              sx={{
-                position: "relative",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-              }}
-            />
+            <CircularProgress sx={{ mt: 12 }} />
           </Box>
         )}
         {chatList?.map((item) => (
