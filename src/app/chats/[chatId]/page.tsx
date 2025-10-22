@@ -24,8 +24,8 @@ import { database as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
 import theme from "@/app/theme";
 import { userApi } from "@/apiService/userApi";
-import { useNavContext } from "@/store/NavDrawer/useNavContext";
 import { messageApi } from "@/apiService/messageApi";
+import { useNavContext } from "@/store/NavDrawer/useNavContext";
 
 interface Message {
   id: string;
@@ -54,8 +54,8 @@ export default function ChatDetailPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
   const messageIds = useRef<Set<string>>(new Set());
+  const initializedRef = useRef(false); // ✅ track initial load
 
   if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
@@ -78,52 +78,47 @@ export default function ChatDetailPage() {
     getFriendName();
   }, []);
 
-  // Load initial messages + realtime listeners safely
+  // Load initial messages + attach listeners
   useEffect(() => {
     const messagesRef = ref(db, `chats/${chatId}`);
     const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
 
-    const attachListeners = () => {
-      // New messages
-      const unsubscribeAdded = onChildAdded(messagesRef, (snap) => {
-        const data = snap.val();
-        const newMsg: Message = {
-          id: snap.key!,
-          senderUid: data.senderUid,
-          text: data.text,
-          timestamp: Number(data.timestamp),
-          status: data.status || {},
-        };
+    // New messages listener
+    const unsubscribeAdded = onChildAdded(messagesRef, (snap) => {
+      if (!initializedRef.current) return; // ignore until initial load done
 
-        setMessages((prev) => {
-          if (messageIds.current.has(newMsg.id)) return prev;
-          messageIds.current.add(newMsg.id);
-          const sorted = [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
-          return sorted;
-        });
-
-        setTimeout(() => scrollToBottom(), 50);
-      });
-
-      // Updates (status/edits)
-      const unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
-        const updatedData = snap.val();
-        setMessages((prev) =>
-          prev
-            .map((m) =>
-              m.id === snap.key
-                ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
-                : m,
-            )
-            .sort((a, b) => a.timestamp - b.timestamp),
-        );
-      });
-
-      return () => {
-        unsubscribeAdded();
-        unsubscribeChanged();
+      const data = snap.val();
+      const newMsg: Message = {
+        id: snap.key!,
+        senderUid: data.senderUid,
+        text: data.text,
+        timestamp: Number(data.timestamp),
+        status: data.status || {},
       };
-    };
+
+      setMessages((prev) => {
+        if (messageIds.current.has(newMsg.id)) return prev;
+        messageIds.current.add(newMsg.id);
+        const sorted = [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
+        return sorted;
+      });
+
+      setTimeout(() => scrollToBottom(), 50);
+    });
+
+    // Updates listener
+    const unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
+      const updatedData = snap.val();
+      setMessages((prev) =>
+        prev
+          .map((m) =>
+            m.id === snap.key
+              ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
+              : m,
+          )
+          .sort((a, b) => a.timestamp - b.timestamp),
+      );
+    });
 
     // Initial load
     get(initialQuery)
@@ -143,14 +138,18 @@ export default function ChatDetailPage() {
 
         setLoading(false);
         setTimeout(() => scrollToBottom(), 100);
-
-        // Attach realtime listeners **after initial load**
-        attachListeners();
+        initializedRef.current = true; // ✅ mark initial load done
       })
       .catch((err) => {
         console.error(err);
         setLoading(false);
+        initializedRef.current = true;
       });
+
+    return () => {
+      unsubscribeAdded();
+      unsubscribeChanged();
+    };
   }, [chatId]);
 
   // Mark messages as read
