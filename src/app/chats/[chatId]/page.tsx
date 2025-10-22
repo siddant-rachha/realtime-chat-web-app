@@ -284,8 +284,8 @@ export default function ChatDetailPage() {
     try {
       await messageApi.sendMessage({ chatId: chatId as string, text: textToSend });
       inputRef.current.value = "";
+
       scrollToBottom();
-      inputRef.current.focus();
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -417,10 +417,9 @@ export default function ChatDetailPage() {
           fullWidth
           size="small"
           placeholder="Type a message..."
-          multiline
+          // multiline
           inputRef={inputRef}
           maxRows={5}
-          InputProps={{ autoComplete: "off" }}
         />
         <IconButton color="primary" onClick={handleSend}>
           <SendIcon sx={{ fontSize: 28 }} />
