@@ -55,9 +55,9 @@ export default function ChatDetailPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  if (!user || !chatId) {
-    return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
-  }
+  const messageIds = useRef<Set<string>>(new Set());
+
+  if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
   const friendUid = (chatId as string).split("_").find((uid) => uid !== user.uid)!;
 
@@ -65,12 +65,11 @@ export default function ChatDetailPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // get friend name using uid
+  // Get friend name
   useEffect(() => {
     const getFriendName = async () => {
       try {
         const { user } = await userApi.searchUser({ userUid: friendUid });
-
         setNavTitle(`(${user?.displayName})`);
       } catch (err) {
         console.error(err);
@@ -79,38 +78,82 @@ export default function ChatDetailPage() {
     getFriendName();
   }, []);
 
-  // 🔹 Load initial messages
+  // Load initial messages + realtime listeners safely
   useEffect(() => {
-    const loadInitialMessages = async () => {
-      try {
-        setLoading(true);
-        const messagesRef = ref(db, `chats/${chatId}`);
-        const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
-        const snap = await get(initialQuery);
+    const messagesRef = ref(db, `chats/${chatId}`);
+    const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
 
+    const attachListeners = () => {
+      // New messages
+      const unsubscribeAdded = onChildAdded(messagesRef, (snap) => {
+        const data = snap.val();
+        const newMsg: Message = {
+          id: snap.key!,
+          senderUid: data.senderUid,
+          text: data.text,
+          timestamp: Number(data.timestamp),
+          status: data.status || {},
+        };
+
+        setMessages((prev) => {
+          if (messageIds.current.has(newMsg.id)) return prev;
+          messageIds.current.add(newMsg.id);
+          const sorted = [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
+          return sorted;
+        });
+
+        setTimeout(() => scrollToBottom(), 50);
+      });
+
+      // Updates (status/edits)
+      const unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
+        const updatedData = snap.val();
+        setMessages((prev) =>
+          prev
+            .map((m) =>
+              m.id === snap.key
+                ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
+                : m,
+            )
+            .sort((a, b) => a.timestamp - b.timestamp),
+        );
+      });
+
+      return () => {
+        unsubscribeAdded();
+        unsubscribeChanged();
+      };
+    };
+
+    // Initial load
+    get(initialQuery)
+      .then((snap) => {
         if (snap.exists()) {
           const msgs = Object.entries(snap.val()).map(([id, data]: any) => ({
             id,
             ...data,
+            timestamp: Number(data.timestamp),
           })) as Message[];
 
           msgs.sort((a, b) => a.timestamp - b.timestamp);
           setMessages(msgs);
+          msgs.forEach((m) => messageIds.current.add(m.id));
           if (msgs.length > 0) setEarliestTimestamp(msgs[0].timestamp);
         }
 
         setLoading(false);
-        scrollToBottom();
-      } catch (err) {
+        setTimeout(() => scrollToBottom(), 100);
+
+        // Attach realtime listeners **after initial load**
+        attachListeners();
+      })
+      .catch((err) => {
         console.error(err);
         setLoading(false);
-      }
-    };
-
-    loadInitialMessages();
+      });
   }, [chatId]);
 
-  // 🔹 Mark messages as READ when chat opens
+  // Mark messages as read
   useEffect(() => {
     const markMessagesAsRead = async () => {
       if (!user?.uid || !chatId) return;
@@ -122,17 +165,13 @@ export default function ChatDetailPage() {
         }
       });
 
-      if (Object.keys(updates).length > 0) {
-        await update(ref(db), updates);
-      }
+      if (Object.keys(updates).length > 0) await update(ref(db), updates);
     };
 
-    if (messages.length > 0) {
-      markMessagesAsRead();
-    }
+    if (messages.length > 0) markMessagesAsRead();
   }, [messages, chatId, user?.uid]);
 
-  // 🔹 Load older messages
+  // Load older messages
   const loadOlderMessages = async () => {
     if (!earliestTimestamp || loadingMore) return;
     setLoadingMore(true);
@@ -148,16 +187,21 @@ export default function ChatDetailPage() {
         endAt(earliestTimestamp - 1),
         limitToLast(PAGE_SIZE),
       );
-      const snap = await get(olderQuery);
 
+      const snap = await get(olderQuery);
       if (snap.exists()) {
         const olderMsgs = Object.entries(snap.val()).map(([id, data]: any) => ({
           id,
           ...data,
+          timestamp: Number(data.timestamp),
         })) as Message[];
 
         olderMsgs.sort((a, b) => a.timestamp - b.timestamp);
-        setMessages((prev) => [...olderMsgs, ...prev]);
+        setMessages((prev) => {
+          olderMsgs.forEach((m) => messageIds.current.add(m.id));
+          return [...olderMsgs, ...prev];
+        });
+
         if (olderMsgs.length > 0) setEarliestTimestamp(olderMsgs[0].timestamp);
 
         if (container) {
@@ -174,59 +218,13 @@ export default function ChatDetailPage() {
     setLoadingMore(false);
   };
 
-  // 🔹 Realtime new messages & status updates
-  useEffect(() => {
-    const messagesRef = ref(db, `chats/${chatId}`);
-
-    // New messages listener
-    const unsubscribeAdded = onChildAdded(messagesRef, (snap) => {
-      const data = snap.val();
-      const newMsg: Message = {
-        id: snap.key!,
-        senderUid: data.senderUid,
-        text: data.text,
-        timestamp: data.timestamp,
-        status: data.status || {},
-      };
-
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
-      });
-
-      scrollToBottom();
-    });
-
-    // Updated message listener (status or edits)
-    const unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
-      const updatedData = snap.val();
-      const updatedMsg: Message = {
-        id: snap.key!,
-        senderUid: updatedData.senderUid,
-        text: updatedData.text,
-        timestamp: updatedData.timestamp,
-        status: updatedData.status || {},
-      };
-
-      setMessages((prev) => prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m)));
-    });
-
-    return () => {
-      unsubscribeAdded();
-      unsubscribeChanged();
-    };
-  }, [chatId]);
-
-  // 🔹 Send message
+  // Send message
   const handleSend = async () => {
     if (!input.trim()) return;
     try {
-      await messageApi.sendMessage({
-        chatId: chatId as string,
-        text: input,
-      });
+      await messageApi.sendMessage({ chatId: chatId as string, text: input });
       setInput("");
-      scrollToBottom();
+      setTimeout(() => scrollToBottom(), 50);
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -243,7 +241,6 @@ export default function ChatDetailPage() {
           display: "flex",
           flexDirection: "column",
           gap: 1,
-          // minus 64px for header box and 64px for input box
           height: "calc(100vh - 128px)",
         }}
       >
@@ -265,6 +262,38 @@ export default function ChatDetailPage() {
           messages.map((msg) => {
             const isMine = msg.senderUid === user.uid;
             const statusForFriend = msg.status?.[friendUid];
+            const date = new Date(msg.timestamp);
+            const now = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(now.getDate() - 1);
+
+            const isToday =
+              date.getDate() === now.getDate() &&
+              date.getMonth() === now.getMonth() &&
+              date.getFullYear() === now.getFullYear();
+            const isYesterday =
+              date.getDate() === yesterday.getDate() &&
+              date.getMonth() === yesterday.getMonth() &&
+              date.getFullYear() === yesterday.getFullYear();
+
+            const timeString = date.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
+            const displayTime = isToday
+              ? `Today, ${timeString}`
+              : isYesterday
+                ? `Yesterday, ${timeString}`
+                : date.toLocaleString("en-US", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+
             return (
               <Box
                 key={msg.id}
@@ -274,12 +303,10 @@ export default function ChatDetailPage() {
                     ? theme.palette.primary.main
                     : theme.palette.secondary.main,
                   color: isMine ? "#fff" : "#000",
-
                   borderBottomLeftRadius: isMine ? 16 : 0,
                   borderBottomRightRadius: isMine ? 0 : 16,
                   borderTopLeftRadius: 16,
                   borderTopRightRadius: 16,
-
                   px: 2,
                   py: 0.5,
                   pt: 1,
@@ -290,9 +317,7 @@ export default function ChatDetailPage() {
               >
                 <Typography fontSize={14}>{msg.text}</Typography>
                 <Box
-                  sx={{
-                    display: "flex",
-                  }}
+                  sx={{ display: "flex" }}
                   {...(isMine ? { justifyContent: "flex-end" } : { justifyContent: "flex-start" })}
                 >
                   <Box
@@ -302,42 +327,8 @@ export default function ChatDetailPage() {
                     sx={isMine ? { right: -10 } : { left: -10 }}
                   >
                     <Typography variant="caption" fontSize={9} sx={{ opacity: 0.7 }}>
-                      {(() => {
-                        const date = new Date(msg.timestamp);
-                        const now = new Date();
-
-                        const isToday =
-                          date.getDate() === now.getDate() &&
-                          date.getMonth() === now.getMonth() &&
-                          date.getFullYear() === now.getFullYear();
-
-                        const yesterday = new Date();
-                        yesterday.setDate(now.getDate() - 1);
-                        const isYesterday =
-                          date.getDate() === yesterday.getDate() &&
-                          date.getMonth() === yesterday.getMonth() &&
-                          date.getFullYear() === yesterday.getFullYear();
-
-                        const timeString = date.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        });
-
-                        if (isToday) return `Today, ${timeString}`;
-                        if (isYesterday) return `Yesterday, ${timeString}`;
-
-                        return date.toLocaleString("en-US", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        });
-                      })()}
+                      {displayTime}
                     </Typography>
-
                     {isMine && (
                       <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
                         {statusForFriend === "read" ? (
@@ -356,7 +347,6 @@ export default function ChatDetailPage() {
         <div ref={messagesEndRef} />
       </Box>
 
-      {/* Input box fixed at bottom */}
       <Box
         sx={{
           display: "flex",
