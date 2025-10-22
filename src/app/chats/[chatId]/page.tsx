@@ -58,7 +58,7 @@ export default function ChatDetailPage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
-  const count = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [friendStatus, setFriendStatus] = useState<{ state: string; last_changed: number } | null>(
     null,
   );
@@ -281,6 +281,7 @@ export default function ChatDetailPage() {
     try {
       await messageApi.sendMessage({ chatId: chatId as string, text: input });
       setInput("");
+      setTimeout(() => inputRef.current?.focus(), 50); // keep keyboard open on mobile
       setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error("Error sending message:", err);
@@ -423,10 +424,12 @@ export default function ChatDetailPage() {
           placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          multiline
+          inputRef={inputRef}
+          maxRows={5}
         />
         <IconButton color="primary" onClick={handleSend}>
-          <SendIcon />
+          <SendIcon sx={{ fontSize: 28 }} />
         </IconButton>
       </Box>
     </>
