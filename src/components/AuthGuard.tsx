@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CircularProgress, Box, Typography } from "@mui/material";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
+import { LoadingText } from "./LoadingText";
 
 const PUBLIC_ROUTES = ["/"];
 
@@ -24,14 +24,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [firebaseUser, authLoading, pathname, router]);
 
   if (authLoading) {
-    return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 12 }}>
-        <Typography variant="h6" fontFamily="monospace">
-          Checking login...
-        </Typography>
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingText text="Checking login..." />;
   }
 
   return <>{children}</>;

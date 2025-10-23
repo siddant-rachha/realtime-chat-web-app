@@ -7,7 +7,6 @@ import {
   ListItem,
   ListItemText,
   Typography,
-  CircularProgress,
   Box,
   IconButton,
 } from "@mui/material";
@@ -18,23 +17,21 @@ import ListItemAvatar from "@mui/material/ListItemAvatar";
 import Avatar from "@mui/material/Avatar";
 import theme from "../theme";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import { LoadingText } from "@/components/LoadingText";
+import { Overlay } from "@/components/Overlay";
+import { ChatListItem } from "@/commonTypes/types";
+import { messageApi } from "@/apiService/messageApi";
+import { useToast } from "@/hooks/useToast";
 
-interface ChatItem {
-  chatId: string;
-  friendUid: string;
-  displayName: string;
-  username: string;
-  lastMessage: string;
-}
-
-export default function ChatsPage() {
+export default function ChatsListPage() {
   const router = useRouter();
-  const [chatList, setChatList] = useState<ChatItem[] | null>(null);
+  const [chatList, setChatList] = useState<ChatListItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const {
     selectors: { user },
   } = useAuthContext();
+  const { errorToast } = useToast();
 
   const generateChatId = (uid1: string, uid2: string) => {
     return [uid1, uid2].sort().join("_");
@@ -46,20 +43,14 @@ export default function ChatsPage() {
   };
 
   useEffect(() => {
-    // need to implement axios
     const fetchChats = async () => {
       setLoading(true);
       try {
-        const idToken = localStorage.getItem("idToken");
-        const res = await fetch("/api/getChats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        const data = await res.json();
-        setChatList(data.chatList || []);
+        const chatListRes = await messageApi.fetchChatList();
+        setChatList(chatListRes.chatList);
       } catch (err) {
         console.error(err);
+        errorToast("Failed to fetch chat list");
       } finally {
         setLoading(false);
       }
@@ -68,15 +59,7 @@ export default function ChatsPage() {
     fetchChats();
   }, []);
 
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 12 }}>
-        <Typography variant="h6" fontFamily="monospace">
-          Loading chats...
-        </Typography>
-        <CircularProgress />
-      </Box>
-    );
+  if (loading) return <LoadingText text="Loading chats..." />;
 
   if (chatList && chatList.length === 0)
     return (
@@ -99,25 +82,7 @@ export default function ChatsPage() {
     >
       <List sx={{ width: "100%", bgcolor: "background.paper", userSelect: "none" }}>
         {/* overlay box */}
-        {open && (
-          <Box
-            sx={{
-              position: "fixed",
-              left: 0,
-
-              width: "100vw",
-              height: "100vh",
-              zIndex: 10,
-              opacity: 0.5,
-              bgcolor: "background.default",
-              display: "flex",
-              justifyContent: "center", // horizontal
-              alignItems: "flex-start", // vertical
-            }}
-          >
-            <CircularProgress sx={{ mt: 12 }} />
-          </Box>
-        )}
+        {open && <Overlay />}
         {chatList?.map((item) => (
           <Box key={item.chatId}>
             <ListItem
@@ -135,8 +100,23 @@ export default function ChatsPage() {
               <ListItemAvatar>
                 <Avatar alt={item.displayName} src="#" />
               </ListItemAvatar>
+
               <ListItemText
-                primary={item.displayName}
+                primary={
+                  <>
+                    <Typography variant="body1" fontWeight="bold" component={"span"}>
+                      {item.displayName}{" "}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      component={"span"}
+                      color="text.secondary"
+                      fontStyle={"italic"}
+                    >
+                      @{item.username}
+                    </Typography>
+                  </>
+                }
                 slotProps={{ primary: { fontWeight: "bold" } }}
                 secondary={
                   item.lastMessage ? `${item.lastMessage.slice(0, 60)}...` : `@${item.username}`

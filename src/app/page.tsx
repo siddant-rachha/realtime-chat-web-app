@@ -6,6 +6,7 @@ import { auth, googleAuthProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import { useToast } from "@/hooks/useToast";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
+import { LoadingText } from "@/components/LoadingText";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -29,15 +30,7 @@ export default function LoginPage() {
     }
   };
 
-  if (firebaseUser)
-    return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 12 }}>
-        <Typography variant="h6" fontFamily="monospace">
-          Redirecting to chats...
-        </Typography>
-        <CircularProgress />
-      </Box>
-    );
+  if (firebaseUser) return <LoadingText text="Redirecting to chats..." />;
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10, textAlign: "center" }}>

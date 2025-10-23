@@ -5,8 +5,10 @@ import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 
 export async function POST(req: NextRequest) {
   try {
-    const { idToken } = await req.json();
-    if (!idToken) return NextResponse.json({ chats: [] });
+    const idToken = req.headers.get("Authorization")?.split("Bearer ")[1];
+    if (!idToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const decoded = await adminAuth.verifyIdToken(idToken);
     const uid = decoded.uid;
