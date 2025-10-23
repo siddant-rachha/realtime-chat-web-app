@@ -6,7 +6,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 import AuthGuard from "@/components/AuthGuard";
 import { AuthProvider } from "@/store/Auth/AuthContext";
-import NavDrawer from "@/components/NavDrawer";
+import NavDrawer from "@/components/NavDrawer/NavDrawer";
 import Head from "next/head";
 import { NavProvider } from "@/store/NavDrawer/NavContext";
 import { ToastContainer } from "react-toastify";

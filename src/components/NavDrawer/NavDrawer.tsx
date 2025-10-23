@@ -1,30 +1,35 @@
-import { styled, useTheme } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Drawer from "@mui/material/Drawer";
-import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import CssBaseline from "@mui/material/CssBaseline";
-import List from "@mui/material/List";
-import Typography from "@mui/material/Typography";
-import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
+import { useAuthContext } from "@/store/Auth/useAuthContext";
+import { useNavContext } from "@/store/NavDrawer/useNavContext";
+import {
+  Box,
+  CssBaseline,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  styled,
+  Toolbar,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
 import Logout from "@mui/icons-material/Logout";
 import ChatIcon from "@mui/icons-material/Chat";
 import PersonIcon from "@mui/icons-material/Person";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { useNavContext } from "@/store/NavDrawer/useNavContext";
-import { useState } from "react";
-import { useAuthContext } from "@/store/Auth/useAuthContext";
+import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
+import { NavBackBtn } from "./components/NavBackBtn";
+import { NavLogo } from "./components/NavLogo";
+import { NavDivider } from "./components/NavDivider";
 
 const drawerWidth = 240;
 
@@ -85,16 +90,6 @@ const AppBar = styled(MuiAppBar, {
   ],
 }));
 
-const DrawerHeader = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
-  ...theme.mixins.toolbar,
-  justifyContent: "flex-start",
-  height: 64,
-}));
-
 export default function NavDrawer({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const theme = useTheme();
@@ -119,6 +114,12 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
     signOutUser();
   };
 
+  const navItems = [
+    { label: "Chats", icon: <ChatIcon />, path: "/chats" },
+    { label: "Add friend", icon: <GroupAddIcon />, path: "/add-friend" },
+    { label: "My profile", icon: <PersonIcon />, path: "/profile" },
+  ];
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
@@ -129,66 +130,24 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
       >
         <Toolbar sx={{ userSelect: "none" }}>
           {/* back button */}
-          {isBackBtnEnabled ? (
-            <Box
-              sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-              onClick={() => {
-                router.replace("/chats");
-              }}
-            >
-              <ArrowBackIcon sx={{ width: 16, height: 16 }} />
-              <Typography sx={{ fontFamily: "monospace", fontSize: 14 }}>Back</Typography>
-            </Box>
-          ) : (
-            <>
-              <Image
-                src="/favicon.ico"
-                alt="DiHola.Vercel.App"
-                width="18"
-                height="18"
-                style={{ marginRight: "4px" }}
-              />
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Typography sx={{ fontFamily: "fantasy" }} fontSize={12}>
-                  DiHola.
-                  <br />
-                  Vercel.
-                  <br />
-                  App
-                </Typography>
-              </Box>
-            </>
-          )}
-          <Divider
-            variant="middle"
-            orientation="vertical"
-            flexItem
-            sx={{ marginLeft: 1, marginRight: 1, backgroundColor: "white" }}
-          />
-          {/* Title */}
+          {isBackBtnEnabled ? <NavBackBtn /> : <NavLogo />}
 
+          <NavDivider />
+
+          {/* Title */}
           <Typography
             component="div"
             sx={{ textAlign: "start", flexGrow: 1, marginLeft: 1, fontFamily: "monospace" }}
           >
             {navTitle}
           </Typography>
+
           <Typography variant="caption" sx={{ fontFamily: "monospace", fontSize: 8 }}>
             {navSubTitle}
           </Typography>
-          <Divider
-            variant="middle"
-            orientation="vertical"
-            flexItem
-            sx={{ marginLeft: 1, marginRight: 1, backgroundColor: "white" }}
-          />
+
+          <NavDivider />
+
           <Typography
             fontSize={10}
             component="div"
@@ -205,12 +164,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
             )}
           </Typography>
 
-          <Divider
-            variant="middle"
-            orientation="vertical"
-            flexItem
-            sx={{ marginLeft: 1, marginRight: 1, backgroundColor: "white" }}
-          />
+          <NavDivider />
 
           <IconButton
             color="inherit"
@@ -223,6 +177,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
           </IconButton>
         </Toolbar>
       </AppBar>
+
       <Main open={open} sx={{ p: 0, px: 1, height: "100vh", width: "100vw" }}>
         <Box
           sx={{
@@ -235,6 +190,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
           {children}
         </Box>
       </Main>
+
       <Drawer
         sx={{
           userSelect: "none",
@@ -250,18 +206,22 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
         anchor="right"
         open={open}
       >
-        <DrawerHeader>
+        <Box sx={{ display: "flex", alignItems: "center", m: 2 }}>
           <Typography
             ml={1}
-            sx={{ cursor: "pointer", fontWeight: "bold" }}
+            sx={{ cursor: "pointer", fontWeight: "bold", fontSize: 18, fontFamily: "monospace" }}
             onClick={handleDrawerClose}
           >
             Close
           </Typography>
           <IconButton onClick={handleDrawerClose}>
-            {theme.direction === "rtl" ? <ChevronLeftIcon /> : <ChevronRightIcon />}{" "}
+            {theme.direction === "rtl" ? (
+              <ChevronLeftIcon color="primary" />
+            ) : (
+              <ChevronRightIcon color="primary" />
+            )}{" "}
           </IconButton>
-        </DrawerHeader>
+        </Box>
         <Divider />
 
         {/* Favicon Logo and title */}
@@ -285,53 +245,29 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
             />
           </ListItem>
         </List>
+
         <Divider />
+
         <List>
-          {/* Navigation links */}
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                router.replace("/chats");
-                handleDrawerClose();
-              }}
-            >
-              <ListItemIcon>
-                <ChatIcon />
-              </ListItemIcon>
-              <ListItemText primary={"Chats"} />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                router.replace("/add-friend");
-                handleDrawerClose();
-              }}
-            >
-              <ListItemIcon>
-                <GroupAddIcon />
-              </ListItemIcon>
-              <ListItemText primary={"Add friend"} />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={() => {
-                router.replace("/profile");
-                handleDrawerClose();
-              }}
-            >
-              <ListItemIcon>
-                <PersonIcon />
-              </ListItemIcon>
-              <ListItemText primary={"My profile"} />
-            </ListItemButton>
-          </ListItem>
+          {navItems.map((item) => (
+            <ListItem key={item.path} disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  router.replace(item.path);
+                  handleDrawerClose();
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            </ListItem>
+          ))}
         </List>
+
         <Divider />
         {/* Logout button */}
         <List>
-          {user ? (
+          {user && (
             <ListItem disablePadding>
               <ListItemButton
                 onClick={() => {
@@ -345,8 +281,6 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
                 <ListItemText primary={"Logout"} sx={{ color: "red" }} />
               </ListItemButton>
             </ListItem>
-          ) : (
-            <Typography sx={{ marginLeft: 2 }}>User not logged in</Typography>
           )}
         </List>
       </Drawer>

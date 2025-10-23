@@ -44,7 +44,7 @@ export default function LoginPage() {
       <Typography variant="h6" sx={{ fontFamily: "monospace" }} gutterBottom>
         {!loading
           ? "Welcome to DiHola.Vercel.App 👋 Click on below sign in button to use all features."
-          : "Signing you in..., Please select your account and wait... Refresh the page if it doesn't load after a long time."}
+          : "Signing you in..., please select your account and wait... refresh the page if it doesn't load after a long time."}
       </Typography>
       <Box sx={{ mt: 4 }}>
         <Button variant="contained" color="primary" onClick={handleGoogleLogin} disabled={loading}>
