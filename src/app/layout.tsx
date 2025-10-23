@@ -9,6 +9,7 @@ import { AuthProvider } from "@/store/Auth/AuthContext";
 import NavDrawer from "@/components/NavDrawer";
 import Head from "next/head";
 import { NavProvider } from "@/store/NavDrawer/NavContext";
+import { ToastContainer } from "react-toastify";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider theme={theme}>
             <AuthProvider>
               <AuthGuard>
+                <ToastContainer style={{ top: "32px", opacity: 0.8 }} />
                 <NavProvider>
                   <NavDrawer>{children}</NavDrawer>
                 </NavProvider>

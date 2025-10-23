@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const snapshot = await adminDb.ref(`users/${uid}`).get();
 
     if (!snapshot.exists()) {
-      return NextResponse.json({ displayName: "", username: "", uid }, { status: 200 });
+      return NextResponse.json({ displayName: "", username: "", uid: "" }, { status: 200 });
     }
 
     const profile = snapshot.val();

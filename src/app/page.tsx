@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Button, Container, Typography, Box, CircularProgress } from "@mui/material";
 import { auth, googleAuthProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
+import { useToast } from "@/hooks/useToast";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const { errorToast } = useToast();
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -15,10 +17,10 @@ export default function LoginPage() {
         prompt: "select_account",
       });
       await signInWithPopup(auth, googleAuthProvider);
-      // No redirect here — onAuthStateChanged will handle it in AuthContext
     } catch (err) {
       console.error(err);
-      alert("Login failed. Please try again.");
+      errorToast("Failed to sign in, please try again");
+    } finally {
       setLoading(false);
     }
   };

@@ -1,5 +1,6 @@
 import { userApi } from "@/apiService/userApi";
 import { UserType } from "@/commonTypes/types";
+import { useToast } from "@/hooks/useToast";
 import { auth, databaseInstance } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { onDisconnect, onValue, ref, serverTimestamp, set, update } from "firebase/database";
@@ -9,6 +10,7 @@ import { useEffect, useState } from "react";
 export const useAuthHook = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const { errorToast } = useToast();
 
   // ------ states ------
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null); // Stores Firebase Auth user
@@ -21,7 +23,6 @@ export const useAuthHook = () => {
   useEffect(() => {
     // Listener runs whenever Firebase login/logout happens
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setAuthLoading(true);
       // If user is logged in
       if (firebaseUser) {
         setFirebaseUser(firebaseUser);
@@ -44,19 +45,24 @@ export const useAuthHook = () => {
       // check if user is logged in
       if (!firebaseUser) return;
 
-      // Fetch user profile from backend
-      const userData = await userApi.getProfile();
+      try {
+        // Fetch user profile from backend
+        const userData = await userApi.getProfile();
 
-      // If profile not set up, go to setup page
-      if (!userData.uid) {
-        router.replace("/setup-profile");
-      } else {
-        setUser(userData);
-        // Redirect to /chats if on root or setup page
-        // other pages should not be redirected
-        if (pathname === "/" || pathname === "/setup-profile") {
-          router.replace("/chats");
+        // If profile not set up, go to setup page
+        if (!userData.uid) {
+          router.replace("/setup-profile");
+        } else {
+          setUser(userData);
+          // Redirect to /chats if on root or setup page
+          // other pages should not be redirected
+          if (pathname === "/" || pathname === "/setup-profile") {
+            router.replace("/chats");
+          }
         }
+      } catch (err) {
+        console.log(err);
+        errorToast("Failed to fetch user profile");
       }
     };
 
@@ -108,10 +114,16 @@ export const useAuthHook = () => {
       state: "offline",
       last_changed: serverTimestamp(),
     });
-    setFirebaseUser(null);
-    setUser(null);
-    localStorage.removeItem("idToken");
-    await auth.signOut();
+
+    try {
+      await auth.signOut();
+      setFirebaseUser(null);
+      setUser(null);
+      localStorage.removeItem("idToken");
+    } catch (err) {
+      console.log(err);
+      errorToast("Failed to sign out");
+    }
   };
   // =====================
 
