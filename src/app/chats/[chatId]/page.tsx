@@ -63,9 +63,7 @@ export default function ChatDetailPage() {
     null,
   );
 
-  if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
-
-  const friendUid = (chatId as string).split("_").find((uid) => uid !== user.uid)!;
+  const friendUid = (chatId as string).split("_").find((uid) => uid !== user?.uid)!;
 
   // ✅ Listen for friend's online/offline updates in real-time
   useEffect(() => {
@@ -294,6 +292,8 @@ export default function ChatDetailPage() {
       setSending(false);
     }
   };
+
+  if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
   return (
     <>
