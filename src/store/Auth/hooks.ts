@@ -109,11 +109,9 @@ export const useAuthHook = () => {
 
   // ===================== Sign Out and Mark User offline =====================
   const signOutUser = async () => {
-    const statusRef = ref(databaseInstance, `status/${firebaseUser?.uid}`);
-    await update(statusRef, {
-      state: "offline",
-      last_changed: serverTimestamp(),
-    });
+    if (!firebaseUser) return;
+
+    markUserOffline();
 
     try {
       await auth.signOut();
@@ -126,6 +124,45 @@ export const useAuthHook = () => {
     }
   };
   // =====================
+
+  // ===================== When User Focus or Blur, mark User online/offline =====================
+
+  useEffect(() => {
+    // check if user is logged in and registered user
+    if (!(firebaseUser && firebaseUser?.uid && user?.uid)) return;
+    const handleBlur = () => {
+      markUserOffline();
+    };
+
+    const handleFocus = () => {
+      markUserOnline();
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [firebaseUser, user]);
+  // =====================
+
+  const markUserOnline = async () => {
+    const statusRef = ref(databaseInstance, `status/${firebaseUser?.uid}`);
+    await update(statusRef, {
+      state: "online",
+      last_changed: serverTimestamp(),
+    });
+  };
+
+  const markUserOffline = async () => {
+    const statusRef = ref(databaseInstance, `status/${firebaseUser?.uid}`);
+    await update(statusRef, {
+      state: "offline",
+      last_changed: serverTimestamp(),
+    });
+  };
 
   return {
     firebaseUser,
