@@ -5,10 +5,14 @@ import { Button, Container, Typography, Box, CircularProgress } from "@mui/mater
 import { auth, googleAuthProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import { useToast } from "@/hooks/useToast";
+import { useAuthContext } from "@/store/Auth/useAuthContext";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { errorToast } = useToast();
+  const {
+    selectors: { firebaseUser },
+  } = useAuthContext();
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -24,6 +28,16 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (firebaseUser)
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 12 }}>
+        <Typography variant="h6" fontFamily="monospace">
+          Redirecting to chats...
+        </Typography>
+        <CircularProgress />
+      </Box>
+    );
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10, textAlign: "center" }}>
