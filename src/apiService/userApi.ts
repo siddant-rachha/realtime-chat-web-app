@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios/api";
-import { UserType } from "@/types/types";
+import { UserType } from "@/commonTypes/types";
 
 export const userApi = {
   getProfile: () => api.post<GetProfileResponse>("/getProfile"),

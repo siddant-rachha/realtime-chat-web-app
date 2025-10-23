@@ -22,7 +22,7 @@ import {
   onChildChanged,
   onValue,
 } from "firebase/database";
-import { database as db } from "@/lib/firebase";
+import { databaseInstance as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
 import theme from "@/app/theme";
 import { userApi } from "@/apiService/userApi";

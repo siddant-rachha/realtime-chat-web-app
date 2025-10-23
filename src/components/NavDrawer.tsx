@@ -25,8 +25,6 @@ import Image from "next/image";
 import { useNavContext } from "@/store/NavDrawer/useNavContext";
 import { useState } from "react";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 const drawerWidth = 240;
 
@@ -106,6 +104,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
   } = useNavContext();
   const {
     selectors: { user },
+    actions: { signOutUser },
   } = useAuthContext();
 
   const handleDrawerOpen = () => {
@@ -117,9 +116,7 @@ export default function NavDrawer({ children }: { children: React.ReactNode }) {
   };
 
   const logoutHandler = async () => {
-    await signOut(auth);
-    localStorage.removeItem("idToken");
-    router.replace("/");
+    signOutUser();
   };
 
   return (
