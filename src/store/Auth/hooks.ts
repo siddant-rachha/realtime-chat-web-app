@@ -73,36 +73,34 @@ export const useAuthHook = () => {
 
   // ===================== Mark User online/offline =====================
   useEffect(() => {
-    function setupPresenceTracking() {
-      // check if user is logged in and registered user
-      if (!(firebaseUser && firebaseUser?.uid && user?.uid)) return;
+    // check if user is logged in and registered user
+    if (!(firebaseUser && firebaseUser?.uid && user?.uid)) return;
 
-      // objects to store
-      const offlineState = { state: "offline", last_changed: serverTimestamp() };
-      const onlineState = { state: "online", last_changed: serverTimestamp() };
+    // objects to store
+    const offlineState = { state: "offline", last_changed: serverTimestamp() };
+    const onlineState = { state: "online", last_changed: serverTimestamp() };
 
-      // check if the user is connected to database
-      const connectedRef = ref(databaseInstance, ".info/connected");
+    // check if the user is connected to database
+    const connectedRef = ref(databaseInstance, ".info/connected");
 
-      // get existing stored user status
-      const userStatusRef = ref(databaseInstance, `status/${firebaseUser.uid}`);
+    // get existing stored user status
+    const userStatusRef = ref(databaseInstance, `status/${firebaseUser.uid}`);
 
-      // register onValue listener, runs every time when connectedRef changes
-      onValue(connectedRef, (snapshot) => {
-        // if not connected, return
-        if (snapshot.val() === false) return;
+    // register onValue listener, runs every time when connectedRef changes
+    const unsubscribe = onValue(connectedRef, (snapshot) => {
+      // if not connected, return
+      if (snapshot.val() === false) return;
 
-        // register onDisconnect listener, runs when user disconnects
-        onDisconnect(userStatusRef)
-          // onDisconnect sets user status to offline
-          .set(offlineState)
+      // register onDisconnect listener, runs when user disconnects
+      onDisconnect(userStatusRef)
+        // onDisconnect sets user status to offline
+        .set(offlineState)
 
-          // when onDisconnect registers first time, set user status to online
-          .then(() => set(userStatusRef, onlineState));
-      });
-    }
+        // when onDisconnect registers first time, set user status to online
+        .then(() => set(userStatusRef, onlineState));
+    });
 
-    setupPresenceTracking();
+    return () => unsubscribe();
   }, [firebaseUser, user]);
 
   // =====================
