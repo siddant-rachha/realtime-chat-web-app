@@ -18,6 +18,8 @@ export interface Message {
   text: string;
   timestamp: number;
   status?: Record<string, "sent" | "read">;
+  deleted: boolean;
+  edited: boolean;
 }
 
 export interface UserStatus {

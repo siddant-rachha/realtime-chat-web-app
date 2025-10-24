@@ -13,6 +13,7 @@ export const useGetFriendStatus = (friendUid: string) => {
 
   // Listen for friend's online/offline updates in real-time
   useEffect(() => {
+    if (!friendUid) return;
     const refStatus = ref(databaseInstance, `status/${friendUid}`);
     const unsubscribe = onValue(refStatus, (snap) => {
       setFriendStatus(snap.exists() ? (snap.val() as UserStatus) : null);
@@ -21,6 +22,7 @@ export const useGetFriendStatus = (friendUid: string) => {
   }, [friendUid]);
 
   useEffect(() => {
+    if (!friendStatus) return;
     const updateText = () => {
       setNavSubTitle(getFriendStatusText(friendStatus));
     };

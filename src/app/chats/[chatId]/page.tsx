@@ -1,32 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Box, TextField, IconButton, CircularProgress, Typography, Button } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { useParams } from "next/navigation";
-import {
-  ref,
-  query,
-  get,
-  update,
-  orderByChild,
-  limitToLast,
-  endAt,
-  startAfter,
-  onChildAdded,
-  onChildChanged,
-} from "firebase/database";
-import { databaseInstance as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
 import theme from "@/app/theme";
 import { Message } from "@/commonTypes/types";
 import { useGetFriendName } from "./hooks/useGetFriendName";
 import { useGetFriendStatus } from "./hooks/useGetFriendStatus";
 import { useSendMessage } from "./hooks/useSendMessage";
+import { useLoadInitialMessages } from "./hooks/useLoadInitialMessages";
+import { useListenNewMessages } from "./hooks/useListenNewMessages";
+import { useListenUpdatesForMsgs } from "./hooks/useListenUpdatesForMsgs";
+import { useMakeMsgAsRead } from "./hooks/useMakeMsgAsRead";
+import { useLoadOldMessages } from "./hooks/useLoadOldMessages";
 
 const PAGE_SIZE = 50;
 
@@ -36,185 +27,69 @@ export default function ChatDetailPage() {
     selectors: { user },
   } = useAuthContext();
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [earliestTimestamp, setEarliestTimestamp] = useState<number | null>(null);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const messageIds = useRef<Set<string>>(new Set());
-  const initializedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // =============== STATES ===============
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [earliestTimestamp, setEarliestTimestamp] = useState<number | null>(null);
+  const [latestTimestamp, setLatestTimestamp] = useState<number>(0);
+  // ===============
+
   const friendUid = (chatId as string).split("_").find((uid) => uid !== user?.uid)!;
-  useGetFriendName(friendUid);
-  useGetFriendStatus(friendUid);
+
+  // =============== HOOKS ===============
+  useGetFriendName(friendUid); // will set name to nav bar title
+  useGetFriendStatus(friendUid); // will set status to nav bar subtitle
+
   const { sendingMsg, handleSend } = useSendMessage({
     chatId: chatId as string,
     scrollToBottom,
     inputRef,
-  });
+  }); // provide functions to send message and scroll to bottom
+
+  const { initialMsgLoading } = useLoadInitialMessages({
+    chatId: chatId as string,
+    PAGE_SIZE,
+    setMessages,
+    scrollToBottom,
+    setEarliestTimestamp,
+    setLatestTimestamp,
+  }); // will load initial messages and set earliest and latest timestamps
+
+  useListenNewMessages({
+    chatId: chatId as string,
+    latestTimestamp,
+    setMessages,
+    scrollToBottom,
+  }); // listen for new messages from the latest timestamp and set the messages state
+
+  useListenUpdatesForMsgs({
+    chatId: chatId as string,
+    earliestTimestamp,
+    setMessages,
+  }); // listen for updates to existing messages and update and set the messages state
+
+  useMakeMsgAsRead({
+    chatId: chatId as string,
+    messages,
+  }); // listen to messages which are in sent mode and mark them as read
+
+  const { loadOlderMessages, loadingOlderMsgs } = useLoadOldMessages({
+    earliestTimestamp,
+    setEarliestTimestamp,
+    setMessages,
+    chatId: chatId as string,
+    PAGE_SIZE,
+    scrollContainerRef,
+  }); // load older messages from the earliest timestamp and set the messages state and earliest timestamp // set the scroll position at its previous position
+
+  // ===============
 
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }
-
-  // Load initial messages + listen for new messages in real-time
-  useEffect(() => {
-    const messagesRef = ref(db, `chats/${chatId}`);
-
-    let unsubscribeAdded: (() => void) | null = null;
-    let unsubscribeChanged: (() => void) | null = null;
-
-    // Load initial messages (latest PAGE_SIZE messages)
-    const loadInitialMessages = async () => {
-      try {
-        const initialQuery = query(messagesRef, orderByChild("timestamp"), limitToLast(PAGE_SIZE));
-        const snap = await get(initialQuery);
-
-        let latestTimestamp = 0; // Default for new chats
-        let msgs: Message[] = [];
-
-        if (snap.exists()) {
-          msgs = Object.entries(snap.val()).map(([id, data]: any) => ({
-            id,
-            ...data,
-            timestamp: Number(data.timestamp),
-          }));
-          msgs.sort((a, b) => a.timestamp - b.timestamp);
-          setMessages(msgs);
-          msgs.forEach((m) => messageIds.current.add(m.id));
-
-          if (msgs.length > 0) {
-            setEarliestTimestamp(msgs[0].timestamp);
-            latestTimestamp = msgs[msgs.length - 1].timestamp;
-          }
-        }
-
-        // ✅ Always attach listener for new messages after latest timestamp
-        const newMessagesQuery = query(
-          messagesRef,
-          orderByChild("timestamp"),
-          startAfter(latestTimestamp),
-        );
-        unsubscribeAdded = onChildAdded(newMessagesQuery, (snap) => {
-          const data = snap.val();
-          if (!data) return;
-
-          const newMsg: Message = {
-            id: snap.key!,
-            senderUid: data.senderUid,
-            text: data.text,
-            timestamp: Number(data.timestamp),
-            status: data.status || {},
-          };
-
-          // Skip duplicates
-          if (messageIds.current.has(newMsg.id)) return;
-          messageIds.current.add(newMsg.id);
-
-          setMessages((prev) => [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp));
-          setTimeout(scrollToBottom, 50);
-        });
-
-        // Listen for updates to existing messages (read status etc.)
-        unsubscribeChanged = onChildChanged(messagesRef, (snap) => {
-          const updatedData = snap.val();
-          setMessages((prev) =>
-            prev
-              .map((m) =>
-                m.id === snap.key
-                  ? { ...m, ...updatedData, timestamp: Number(updatedData.timestamp) }
-                  : m,
-              )
-              .sort((a, b) => a.timestamp - b.timestamp),
-          );
-        });
-
-        setLoading(false);
-        setTimeout(scrollToBottom, 100);
-        initializedRef.current = true;
-      } catch (err) {
-        console.error("Error loading messages:", err);
-        setLoading(false);
-        initializedRef.current = true;
-      }
-    };
-
-    loadInitialMessages();
-
-    // Cleanup on unmount
-    return () => {
-      if (unsubscribeAdded) unsubscribeAdded();
-      if (unsubscribeChanged) unsubscribeChanged();
-    };
-  }, [chatId]);
-
-  // Mark messages as read
-  useEffect(() => {
-    const markMessagesAsRead = async () => {
-      if (!user?.uid || !chatId) return;
-      const updates: Record<string, any> = {};
-
-      messages.forEach((msg) => {
-        if (msg.senderUid !== user.uid && msg.status?.[user.uid] === "sent") {
-          updates[`chats/${chatId}/${msg.id}/status/${user.uid}`] = "read";
-        }
-      });
-
-      if (Object.keys(updates).length > 0) await update(ref(db), updates);
-    };
-
-    if (messages.length > 0) markMessagesAsRead();
-  }, [messages, chatId, user?.uid]);
-
-  // Load older messages
-  const loadOlderMessages = async () => {
-    if (!earliestTimestamp || loadingMore) return;
-    setLoadingMore(true);
-
-    const container = scrollContainerRef.current;
-    const scrollHeightBefore = container?.scrollHeight || 0;
-
-    try {
-      const messagesRef = ref(db, `chats/${chatId}`);
-      const olderQuery = query(
-        messagesRef,
-        orderByChild("timestamp"),
-        endAt(earliestTimestamp - 1),
-        limitToLast(PAGE_SIZE),
-      );
-
-      const snap = await get(olderQuery);
-      if (snap.exists()) {
-        const olderMsgs = Object.entries(snap.val()).map(([id, data]: any) => ({
-          id,
-          ...data,
-          timestamp: Number(data.timestamp),
-        })) as Message[];
-
-        olderMsgs.sort((a, b) => a.timestamp - b.timestamp);
-        setMessages((prev) => {
-          olderMsgs.forEach((m) => messageIds.current.add(m.id));
-          return [...olderMsgs, ...prev];
-        });
-
-        if (olderMsgs.length > 0) setEarliestTimestamp(olderMsgs[0].timestamp);
-
-        if (container) {
-          const scrollHeightAfter = container.scrollHeight;
-          container.scrollTop = scrollHeightAfter - scrollHeightBefore;
-        }
-      } else {
-        setEarliestTimestamp(null);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-
-    setLoadingMore(false);
-  };
 
   if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
@@ -236,13 +111,13 @@ export default function ChatDetailPage() {
           <Button
             variant="outlined"
             onClick={loadOlderMessages}
-            disabled={loadingMore || !earliestTimestamp}
+            disabled={loadingOlderMsgs || !earliestTimestamp}
           >
-            {loadingMore ? "Loading..." : <ArrowUpwardIcon />}
+            {loadingOlderMsgs ? "Loading..." : <ArrowUpwardIcon />}
           </Button>
         </Box>
 
-        {loading ? (
+        {initialMsgLoading ? (
           <CircularProgress sx={{ mx: "auto", mt: 5 }} />
         ) : messages.length === 0 ? (
           <Typography sx={{ textAlign: "center", mt: 2 }}>No messages yet</Typography>

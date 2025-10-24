@@ -17,6 +17,7 @@ export const useGetFriendName = (friendUid: string) => {
   };
 
   useEffect(() => {
+    if (!friendUid) return;
     getFriendName();
   }, [friendUid]);
 };
