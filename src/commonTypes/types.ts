@@ -20,6 +20,7 @@ export interface Message {
   status?: Record<string, "sent" | "read">;
   deleted: boolean;
   edited: boolean;
+  image?: string;
 }
 
 export interface UserStatus {

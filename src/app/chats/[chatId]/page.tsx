@@ -42,14 +42,14 @@ export default function ChatDetailPage() {
   const friendUid = (chatId as string).split("_").find((uid) => uid !== user?.uid)!;
 
   // =============== HOOKS ===============
-  useGetFriendName(friendUid); // will set name to nav bar title
-  useGetFriendStatus(friendUid); // will set status to nav bar subtitle
+  useGetFriendName(friendUid);
+  useGetFriendStatus(friendUid);
 
   const { sendingMsg, handleSend } = useSendMessage({
     chatId: chatId as string,
     scrollToBottom,
     inputRef,
-  }); // provide functions to send message and scroll to bottom
+  });
 
   const { initialMsgLoading } = useLoadInitialMessages({
     chatId: chatId as string,
@@ -58,25 +58,25 @@ export default function ChatDetailPage() {
     scrollToBottom,
     setEarliestTimestamp,
     setLatestTimestamp,
-  }); // will load initial messages and set earliest and latest timestamps
+  });
 
   useListenNewMessages({
     chatId: chatId as string,
     latestTimestamp,
     setMessages,
     scrollToBottom,
-  }); // listen for new messages from the latest timestamp and set the messages state
+  });
 
   useListenUpdatesForMsgs({
     chatId: chatId as string,
     earliestTimestamp,
     setMessages,
-  }); // listen for updates to existing messages and update and set the messages state
+  });
 
   useMakeMsgAsRead({
     chatId: chatId as string,
     messages,
-  }); // listen to messages which are in sent mode and mark them as read
+  });
 
   const { loadOlderMessages, loadingOlderMsgs } = useLoadOldMessages({
     earliestTimestamp,
@@ -85,15 +85,12 @@ export default function ChatDetailPage() {
     chatId: chatId as string,
     PAGE_SIZE,
     scrollContainerRef,
-  }); // load older messages from the earliest timestamp and set the messages state and earliest timestamp // set the scroll position at its previous position
-
-  // ===============
+  });
 
   // =================== HELPERS ===================
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }
-  // ===================
 
   const renderMessage = (msg: Message) => {
     const isMine = msg.senderUid === user?.uid;
@@ -119,7 +116,12 @@ export default function ChatDetailPage() {
           flexDirection: "column",
         }}
       >
-        <Typography fontSize={14}>{msg.text}</Typography>
+        {msg.image ? (
+          <Box component="img" src={msg.image} alt="GIF" sx={{ width: "100%", borderRadius: 1 }} />
+        ) : (
+          <Typography fontSize={14}>{msg.text}</Typography>
+        )}
+
         <Box sx={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
           <Box
             display="flex"

@@ -13,7 +13,7 @@ export const ChatInputBox = ({
 }: {
   sendingMsg: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
-  handleSend: () => void;
+  handleSend: ({ text, image }: { text?: string; image?: string }) => void;
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -23,6 +23,10 @@ export const ChatInputBox = ({
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onOpen={() => setDrawerOpen(true)}
+        onSelectImage={(imageUrl) => {
+          handleSend({ image: imageUrl });
+          setDrawerOpen(false); // close drawer after selection
+        }}
       />
 
       <Box
@@ -49,9 +53,20 @@ export const ChatInputBox = ({
           multiline
           inputRef={inputRef}
           maxRows={4}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend({ text: inputRef.current?.value });
+            }
+          }}
         />
 
-        <IconButton color="primary" onClick={handleSend} size="large" disabled={sendingMsg}>
+        <IconButton
+          color="primary"
+          onClick={() => handleSend({ text: inputRef.current?.value })}
+          size="large"
+          disabled={sendingMsg}
+        >
           {sendingMsg ? <CircularProgress size={24} /> : <SendIcon />}
         </IconButton>
       </Box>
