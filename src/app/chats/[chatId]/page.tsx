@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Box, TextField, IconButton, CircularProgress, Typography, Button } from "@mui/material";
-import SendIcon from "@mui/icons-material/Send";
+import { Box, CircularProgress, Typography, Button } from "@mui/material";
 import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
@@ -20,6 +19,7 @@ import { useMakeMsgAsRead } from "./hooks/useMakeMsgAsRead";
 import { useLoadOldMessages } from "./hooks/useLoadOldMessages";
 import { LoadingText } from "@/components/LoadingText";
 import { formatTimestamp } from "./helpers/helpers";
+import { ChatInputBox } from "./components/ChatInputBox";
 
 const PAGE_SIZE = 50;
 
@@ -186,37 +186,7 @@ export default function ChatDetailPage() {
       </Box>
 
       {/* Input area */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          mt: 1,
-          position: "sticky",
-          bottom: 0,
-          background: "#fff",
-          py: 1,
-          borderTop: "1px solid #ccc",
-        }}
-      >
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Type a message..."
-          multiline
-          inputRef={inputRef}
-          maxRows={4}
-        />
-        <IconButton
-          color="primary"
-          onClick={handleSend}
-          tabIndex={-1} // prevents focusing
-          size="large"
-          disabled={sendingMsg} // disable while sending
-        >
-          {sendingMsg ? <CircularProgress size={24} /> : <SendIcon />}
-        </IconButton>
-      </Box>
+      <ChatInputBox sendingMsg={sendingMsg} inputRef={inputRef} handleSend={handleSend} />
     </>
   );
 }
