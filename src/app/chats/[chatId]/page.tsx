@@ -18,6 +18,8 @@ import { useListenNewMessages } from "./hooks/useListenNewMessages";
 import { useListenUpdatesForMsgs } from "./hooks/useListenUpdatesForMsgs";
 import { useMakeMsgAsRead } from "./hooks/useMakeMsgAsRead";
 import { useLoadOldMessages } from "./hooks/useLoadOldMessages";
+import { LoadingText } from "@/components/LoadingText";
+import { formatTimestamp } from "./helpers/helpers";
 
 const PAGE_SIZE = 50;
 
@@ -87,12 +89,65 @@ export default function ChatDetailPage() {
 
   // ===============
 
+  // =================== HELPERS ===================
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }
+  // ===================
 
-  if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
+  const renderMessage = (msg: Message) => {
+    const isMine = msg.senderUid === user?.uid;
+    const statusForFriend = msg.status?.[friendUid];
+    const displayTime = formatTimestamp(msg.timestamp);
 
+    return (
+      <Box
+        key={msg.id}
+        sx={{
+          alignSelf: isMine ? "flex-end" : "flex-start",
+          backgroundColor: isMine ? theme.palette.primary.main : theme.palette.secondary.main,
+          color: isMine ? "#fff" : "#000",
+          borderBottomLeftRadius: isMine ? 16 : 0,
+          borderBottomRightRadius: isMine ? 0 : 16,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          px: 2,
+          py: 0.5,
+          pt: 1,
+          maxWidth: "90%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Typography fontSize={14}>{msg.text}</Typography>
+        <Box sx={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
+          <Box
+            display="flex"
+            position="relative"
+            alignItems="center"
+            sx={isMine ? { right: -10 } : { left: -10 }}
+          >
+            <Typography variant="caption" fontSize={9} sx={{ opacity: 0.7 }}>
+              {displayTime}
+            </Typography>
+            {isMine && (
+              <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
+                {statusForFriend === "read" ? (
+                  <DoneAllIcon sx={{ fontSize: "1rem", color: "#4FC3F7" }} />
+                ) : (
+                  <DoneIcon sx={{ fontSize: "1rem", color: "#fff" }} />
+                )}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
+
+  if (!user || !chatId) return <LoadingText text="Loading chat..." />;
+
+  // =================== RENDER ===================
   return (
     <>
       <Box
@@ -107,101 +162,30 @@ export default function ChatDetailPage() {
           height: "calc(100vh - 128px)",
         }}
       >
+        {/* Load older messages */}
         <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
           <Button
             variant="outlined"
             onClick={loadOlderMessages}
             disabled={loadingOlderMsgs || !earliestTimestamp}
           >
-            {loadingOlderMsgs ? "Loading..." : <ArrowUpwardIcon />}
+            {loadingOlderMsgs ? <CircularProgress size={20} /> : <ArrowUpwardIcon />}
           </Button>
         </Box>
 
+        {/* Messages */}
         {initialMsgLoading ? (
-          <CircularProgress sx={{ mx: "auto", mt: 5 }} />
+          <LoadingText text="Loading recent messages..." />
         ) : messages.length === 0 ? (
           <Typography sx={{ textAlign: "center", mt: 2 }}>No messages yet</Typography>
         ) : (
-          messages.map((msg) => {
-            const isMine = msg.senderUid === user.uid;
-            const statusForFriend = msg.status?.[friendUid];
-            const date = new Date(msg.timestamp);
-            const now = new Date();
-            const yesterday = new Date();
-            yesterday.setDate(now.getDate() - 1);
-            const isToday = date.toDateString() === now.toDateString();
-            const isYesterday = date.toDateString() === yesterday.toDateString();
-            const timeString = date.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
-            const displayTime = isToday
-              ? `Today, ${timeString}`
-              : isYesterday
-                ? `Yesterday, ${timeString}`
-                : date.toLocaleString("en-US", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  });
-
-            return (
-              <Box
-                key={msg.id}
-                sx={{
-                  alignSelf: isMine ? "flex-end" : "flex-start",
-                  backgroundColor: isMine
-                    ? theme.palette.primary.main
-                    : theme.palette.secondary.main,
-                  color: isMine ? "#fff" : "#000",
-                  borderBottomLeftRadius: isMine ? 16 : 0,
-                  borderBottomRightRadius: isMine ? 0 : 16,
-                  borderTopLeftRadius: 16,
-                  borderTopRightRadius: 16,
-                  px: 2,
-                  py: 0.5,
-                  pt: 1,
-                  maxWidth: "90%",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <Typography fontSize={14}>{msg.text}</Typography>
-                <Box
-                  sx={{ display: "flex" }}
-                  {...(isMine ? { justifyContent: "flex-end" } : { justifyContent: "flex-start" })}
-                >
-                  <Box
-                    display="flex"
-                    position="relative"
-                    alignItems="center"
-                    sx={isMine ? { right: -10 } : { left: -10 }}
-                  >
-                    <Typography variant="caption" fontSize={9} sx={{ opacity: 0.7 }}>
-                      {displayTime}
-                    </Typography>
-                    {isMine && (
-                      <Box sx={{ display: "flex", alignItems: "center", ml: 1 }}>
-                        {statusForFriend === "read" ? (
-                          <DoneAllIcon sx={{ fontSize: "1rem", color: "#4FC3F7" }} />
-                        ) : (
-                          <DoneIcon sx={{ fontSize: "1rem", color: "#fff" }} />
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
-              </Box>
-            );
-          })
+          messages.map(renderMessage)
         )}
+
         <div ref={messagesEndRef} />
       </Box>
 
+      {/* Input area */}
       <Box
         sx={{
           display: "flex",

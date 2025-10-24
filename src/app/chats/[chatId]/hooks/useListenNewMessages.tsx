@@ -42,5 +42,5 @@ export const useListenNewMessages = ({
     });
 
     return () => unsubscribeAdded();
-  }, [chatId]);
+  }, [chatId, latestTimestamp]);
 };
