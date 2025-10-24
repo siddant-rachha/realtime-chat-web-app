@@ -11,3 +11,16 @@ export interface ChatListItem {
   username: string;
   lastMessage: string;
 }
+
+export interface Message {
+  id: string;
+  senderUid: string;
+  text: string;
+  timestamp: number;
+  status?: Record<string, "sent" | "read">;
+}
+
+export interface UserStatus {
+  state: "online" | "offline";
+  last_changed: number;
+}

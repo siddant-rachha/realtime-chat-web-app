@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -20,22 +19,14 @@ import {
   startAfter,
   onChildAdded,
   onChildChanged,
-  onValue,
 } from "firebase/database";
 import { databaseInstance as db } from "@/lib/firebase";
 import { useAuthContext } from "@/store/Auth/useAuthContext";
 import theme from "@/app/theme";
-import { userApi } from "@/apiService/userApi";
-import { messageApi } from "@/apiService/messageApi";
-import { useNavContext } from "@/store/NavDrawer/useNavContext";
-
-interface Message {
-  id: string;
-  senderUid: string;
-  text: string;
-  timestamp: number;
-  status?: Record<string, string>;
-}
+import { Message } from "@/commonTypes/types";
+import { useGetFriendName } from "./hooks/useGetFriendName";
+import { useGetFriendStatus } from "./hooks/useGetFriendStatus";
+import { useSendMessage } from "./hooks/useSendMessage";
 
 const PAGE_SIZE = 50;
 
@@ -44,78 +35,30 @@ export default function ChatDetailPage() {
   const {
     selectors: { user },
   } = useAuthContext();
-  const {
-    actions: { setNavTitle, setNavSubTitle },
-  } = useNavContext();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [earliestTimestamp, setEarliestTimestamp] = useState<number | null>(null);
-  const [sending, setSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [friendStatus, setFriendStatus] = useState<{ state: string; last_changed: number } | null>(
-    null,
-  );
 
   const friendUid = (chatId as string).split("_").find((uid) => uid !== user?.uid)!;
+  useGetFriendName(friendUid);
+  useGetFriendStatus(friendUid);
+  const { sendingMsg, handleSend } = useSendMessage({
+    chatId: chatId as string,
+    scrollToBottom,
+    inputRef,
+  });
 
-  // ✅ Listen for friend's online/offline updates in real-time
-  useEffect(() => {
-    const friendStatusRef = ref(db, `status/${friendUid}`);
-
-    const unsubscribe = onValue(friendStatusRef, (snap) => {
-      if (snap.exists()) setFriendStatus(snap.val());
-      else setFriendStatus(null);
-    });
-
-    return () => unsubscribe();
-  }, [friendUid]);
-
-  const getFriendStatusText = () => {
-    if (!friendStatus) return "Offline";
-    if (friendStatus.state === "online") return "Online";
-
-    const diffMs = Date.now() - friendStatus.last_changed;
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return "Last seen just now";
-    if (diffMin < 60) return `Last seen ${diffMin} min ago`;
-    const diffHrs = Math.floor(diffMin / 60);
-    if (diffHrs < 24) return `Last seen ${diffHrs} hr ago`;
-    const diffDays = Math.floor(diffHrs / 24);
-    return `Last seen ${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  };
-
-  useEffect(() => {
-    const statusText = getFriendStatusText();
-    setNavSubTitle(statusText);
-
-    return () => {
-      setNavSubTitle("");
-    };
-  }, [friendStatus]);
-
-  const scrollToBottom = () => {
+  function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Get friend name
-  useEffect(() => {
-    const getFriendName = async () => {
-      try {
-        const { user } = await userApi.searchUser({ userUid: friendUid });
-        setNavTitle(`(${user?.displayName})`);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    getFriendName();
-  }, []);
+  }
 
   // Load initial messages + listen for new messages in real-time
   useEffect(() => {
@@ -273,26 +216,6 @@ export default function ChatDetailPage() {
     setLoadingMore(false);
   };
 
-  // Send message
-  const handleSend = async () => {
-    if (!inputRef.current?.value.trim() || sending) return; // Prevent multiple sends
-
-    setSending(true);
-    try {
-      inputRef.current.focus();
-      await messageApi.sendMessage({ chatId: chatId as string, text: inputRef.current.value });
-
-      inputRef.current.value = "";
-      inputRef.current.focus();
-
-      setTimeout(scrollToBottom, 100);
-    } catch (err) {
-      console.error("Error sending message:", err);
-    } finally {
-      setSending(false);
-    }
-  };
-
   if (!user || !chatId) return <CircularProgress sx={{ mt: 5, display: "block", mx: "auto" }} />;
 
   return (
@@ -430,9 +353,9 @@ export default function ChatDetailPage() {
           onClick={handleSend}
           tabIndex={-1} // prevents focusing
           size="large"
-          disabled={sending} // disable while sending
+          disabled={sendingMsg} // disable while sending
         >
-          {sending ? <CircularProgress size={24} /> : <SendIcon />}
+          {sendingMsg ? <CircularProgress size={24} /> : <SendIcon />}
         </IconButton>
       </Box>
     </>
