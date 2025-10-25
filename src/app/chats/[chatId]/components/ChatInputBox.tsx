@@ -98,7 +98,7 @@ export const ChatInputBox = ({
 
         {emojiPickerOpen && (
           <Box sx={{ position: "fixed", bottom: "60px", right: "4vw", zIndex: 1000 }}>
-            <EmojiPicker onEmojiClick={handleEmojiClick} />
+            <EmojiPicker onEmojiClick={handleEmojiClick} autoFocusSearch={false} />
           </Box>
         )}
       </Box>
