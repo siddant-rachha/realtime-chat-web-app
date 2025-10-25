@@ -3,8 +3,10 @@
 import { Box, CircularProgress, IconButton, TextField } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import ImageSearchIcon from "@mui/icons-material/ImageSearch";
+import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions";
 import { RefObject, useState } from "react";
 import ImageSearchDrawer from "./ImageSearchDrawer";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 
 export const ChatInputBox = ({
   sendingMsg,
@@ -16,6 +18,22 @@ export const ChatInputBox = ({
   handleSend: ({ text, image }: { text?: string; image?: string }) => void;
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    if (inputRef.current) {
+      const cursorPos = inputRef.current.selectionStart || 0;
+      const text = inputRef.current.value;
+      const newText = text.slice(0, cursorPos) + emojiData.emoji + text.slice(cursorPos);
+      inputRef.current.value = newText;
+
+      // Move cursor after emoji
+      inputRef.current.selectionStart = inputRef.current.selectionEnd =
+        cursorPos + emojiData.emoji.length;
+
+      inputRef.current.focus();
+    }
+  };
 
   return (
     <>
@@ -63,12 +81,26 @@ export const ChatInputBox = ({
 
         <IconButton
           color="primary"
+          size="large"
+          onClick={() => setEmojiPickerOpen((prev) => !prev)}
+        >
+          <EmojiEmotionsIcon />
+        </IconButton>
+
+        <IconButton
+          color="primary"
           onClick={() => handleSend({ text: inputRef.current?.value })}
           size="large"
           disabled={sendingMsg}
         >
           {sendingMsg ? <CircularProgress size={24} /> : <SendIcon />}
         </IconButton>
+
+        {emojiPickerOpen && (
+          <Box sx={{ position: "fixed", bottom: "60px", right: "4vw", zIndex: 1000 }}>
+            <EmojiPicker onEmojiClick={handleEmojiClick} />
+          </Box>
+        )}
       </Box>
     </>
   );

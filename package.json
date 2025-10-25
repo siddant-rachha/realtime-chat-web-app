@@ -24,6 +24,7 @@
     "@mui/material-nextjs": "^7.3.3",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
+    "emoji-picker-react": "^4.14.2",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",
     "next": "15.5.6",
