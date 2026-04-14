@@ -12,17 +12,24 @@ export const useSendMessage = ({
 }) => {
   const [sendingMsg, setSendingMsg] = useState(false);
 
-  // Send message
-  const handleSend = async () => {
-    if (!inputRef.current?.value.trim() || sendingMsg) return; // Prevent multiple sends
+  const handleSend = async ({ text, image }: { text?: string; image?: string }) => {
+    const trimmedText = text?.trim();
+
+    if ((!trimmedText && !image) || sendingMsg) return;
 
     setSendingMsg(true);
-    try {
-      inputRef.current.focus();
-      await messageApi.sendMessage({ chatId: chatId as string, text: inputRef.current.value });
 
-      inputRef.current.value = "";
-      inputRef.current.focus();
+    try {
+      inputRef.current?.focus();
+
+      await messageApi.sendMessage({
+        chatId,
+        text: trimmedText || "",
+        image,
+      });
+
+      // Clear input only if text was sent from input box
+      if (trimmedText) inputRef.current!.value = "";
 
       setTimeout(scrollToBottom, 100);
     } catch (err) {
@@ -32,8 +39,5 @@ export const useSendMessage = ({
     }
   };
 
-  return {
-    handleSend,
-    sendingMsg,
-  };
+  return { handleSend, sendingMsg };
 };
